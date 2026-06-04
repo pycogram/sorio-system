@@ -62,6 +62,7 @@ export async function createPlan(
 }
 
 // CUSTOMER: one-time authority setup for a given mint.
+// CUSTOMER: one-time authority setup for a given mint.
 export async function initAuthority(
   client: any,
   customer: TransactionSigner,
@@ -123,6 +124,12 @@ export async function subscribe(
       },
     })
     .sendTransaction();
+
+  const [subscriptionPda] = await findSubscriptionDelegationPda({
+    planPda: opts.planPda,
+    subscriber: customer.address,
+  });
+  return { subscriptionPda };
 }
 
 // PULLER: collect one cycle's payment. Called by the cron worker.
@@ -142,7 +149,7 @@ export async function collectPayment(
     subscriber: opts.delegator,
   });
 
-  await client.subscriptions.instructions
+const result = await client.subscriptions.instructions
     .transferSubscription({
       amount: opts.amount,
       caller,
@@ -154,6 +161,8 @@ export async function collectPayment(
       tokenProgram: TOKEN_PROGRAM,
     })
     .sendTransaction();
+
+  return { signature: result?.context?.signature ?? null };
 }
 
 export {
