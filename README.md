@@ -34,12 +34,8 @@ Both run on the same engine; only role assignment and UI differ.
 
 ## Tech
 
-. TypeScript 
-· Solana (`@solana/kit`, `@solana/subscriptions`) 
-· Cloudflare Workers 
-· Supabase (Postgres) 
-· Next.js 
-· pnpm workspaces
+.TypeScript · Solana (`@solana/kit`, `@solana/subscriptions`) · Cloudflare
+Workers · Supabase (Postgres) · Next.js · pnpm workspaces
 
 ## Development
 
