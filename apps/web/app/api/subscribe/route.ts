@@ -1,0 +1,47 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createClient as createDb } from "@supabase/supabase-js";
+
+export const runtime = "nodejs";
+
+export async function POST(req: NextRequest) {
+  try {
+    const { planPda, subscriberWallet, subscriptionPda } = await req.json();
+    if (!planPda || !subscriberWallet || !subscriptionPda) {
+      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    }
+
+    const db = createDb(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false } }
+    );
+
+    // Look up the plan to get its id + period.
+    const { data: plan, error: pErr } = await db
+      .from("plans")
+      .select("id, period_seconds")
+      .eq("plan_pda", planPda)
+      .maybeSingle();
+    if (pErr || !plan) {
+      return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+    }
+
+    // First collection is due now (so the worker picks it up on next run).
+    const { data: sub, error: sErr } = await db
+      .from("subscriptions")
+      .insert({
+        plan_id: plan.id,
+        subscriber_wallet: subscriberWallet,
+        subscription_pda: subscriptionPda,
+        next_collection_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+    if (sErr) throw sErr;
+
+    return NextResponse.json({ subscriptionId: sub.id });
+  } catch (e: any) {
+    console.error("subscribe save failed:", e?.message ?? e);
+    return NextResponse.json({ error: e?.message ?? "failed" }, { status: 500 });
+  }
+}
