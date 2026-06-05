@@ -29,6 +29,15 @@ export async function makeClient(secretBytes: Uint8Array) {
   return { client, signer: kp };
 }
 
+// Build a client that signs via an externally-provided signer (e.g. a browser wallet).
+export async function makeClientWithSigner(walletSigner: any) {
+  const client = await createClient()
+    .use(signer(walletSigner))
+    .use(solanaDevnetRpc())
+    .use(subscriptionsProgram());
+  return { client, signer: walletSigner };
+}
+
 // MERCHANT (or payer): create a plan. Returns the plan PDA + bump.
 export async function createPlan(
   client: any,
