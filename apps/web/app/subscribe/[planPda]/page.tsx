@@ -8,6 +8,7 @@ type Plan = {
   plan_pda: string;
   name: string;
   amount: number;
+  merchant_amount: number;
   token_mint: string;
   period_seconds: number;
   merchants: { name: string; destination_wallet: string } | null;
@@ -129,12 +130,23 @@ export default function SubscribePage({
               <div className="my-6 h-px bg-[var(--border)]" />
 
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[var(--muted)]">Billed every</span>
-                <span className="font-medium capitalize">{period}</span>
+                <span className="text-[var(--muted)]">Subscription</span>
+                <span className="font-medium">
+                  ${(plan.merchant_amount / 1_000_000).toFixed(2)}
+                </span>
               </div>
               <div className="mt-2 flex items-center justify-between text-sm">
-                <span className="text-[var(--muted)]">Paid in</span>
-                <span className="font-medium">USDC</span>
+                <span className="text-[var(--muted)]">Service fee</span>
+                <span className="font-medium">
+                  ${((plan.amount - plan.merchant_amount) / 1_000_000).toFixed(2)}
+                </span>
+              </div>
+              <div className="my-3 h-px bg-[var(--border)]" />
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[var(--muted)]">Total per {period}</span>
+                <span className="font-semibold">
+                  ${(plan.amount / 1_000_000).toFixed(2)}
+                </span>
               </div>
 
               <button
