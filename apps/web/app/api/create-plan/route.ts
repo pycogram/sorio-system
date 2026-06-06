@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readFileSync } from "node:fs";
 import { address } from "@solana/kit";
 import { createClient as createDb } from "@supabase/supabase-js";
-import { makeClient, createPlan } from "../../../../../packages/solana/src/index";
+import { makeClient, createPlan, ensureMerchantAta } from "../../../../../packages/solana/src/index";
 
 export const runtime = "nodejs";
 
@@ -25,8 +25,15 @@ export async function POST(req: NextRequest) {
     const pullerBytes = new Uint8Array(JSON.parse(process.env.PLATFORM_PULLER_SECRET!));
     const { client, signer: platform } = await makeClient(pullerBytes);
 
-    // amount: USDC has 6 decimals
-    const amountBaseUnits = BigInt(Math.round(parseFloat(amount) * 1_000_000));
+    // amount: USDC has 6 decimals. `amount` is what the MERCHANT wants to receive.
+    const merchantAmount = BigInt(Math.round(parseFloat(amount) * 1_000_000));
+
+    // Platform fee (default 2%) baked into the customer-facing total.
+    const feePercent = Number(process.env.PLATFORM_FEE_PERCENT ?? "2");
+    const total = merchantAmount + (merchantAmount * BigInt(Math.round(feePercent * 100))) / 10000n;
+    
+    // The on-chain plan (what the customer authorizes) is the TOTAL.
+    const amountBaseUnits = total;
     const periodHours = periodHoursMap[period] ?? 720;
     const planId = BigInt(Date.now());
 
@@ -36,6 +43,13 @@ export async function POST(req: NextRequest) {
       amount: amountBaseUnits,
       periodHours,
     });
+
+    // Ensure the merchant's USDC account exists so collections can land there.
+    try {
+      await ensureMerchantAta(platform, address(destinationWallet), USDC_MINT);
+    } catch (e: any) {
+      console.error("ensureMerchantAta failed (non-fatal):", e?.message ?? e);
+    }
 
     // Insert into Supabase
     const db = createDb(
@@ -73,6 +87,7 @@ export async function POST(req: NextRequest) {
       plan_pda: planPda,
       name,
       amount: Number(amountBaseUnits),
+      merchant_amount: Number(merchantAmount),
       token_mint: USDC_MINT,
       period_seconds: periodHours * 3600,
       plan_id_raw: planId.toString(),

@@ -3,9 +3,21 @@ import {
   createKeyPairSignerFromBytes,
   type Address,
   type TransactionSigner,
+  createSolanaRpc,
+  pipe,
+  createTransactionMessage,
+  setTransactionMessageFeePayerSigner,
+  setTransactionMessageLifetimeUsingBlockhash,
+  appendTransactionMessageInstruction,
+  signTransactionMessageWithSigners,
+  getBase64EncodedWireTransaction,
+
 } from "@solana/kit";
+
 import { signer } from "@solana/kit-plugin-signer";
 import { solanaDevnetRpc } from "@solana/kit-plugin-rpc";
+import { getCreateAssociatedTokenIdempotentInstructionAsync } from "@solana-program/token";
+
 import {
   subscriptionsProgram,
   findPlanPda,
@@ -36,6 +48,40 @@ export async function makeClientWithSigner(walletSigner: any) {
     .use(solanaDevnetRpc())
     .use(subscriptionsProgram());
   return { client, signer: walletSigner };
+}
+
+const RPC_URL = process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
+
+// Ensure a merchant's associated token account exists (idempotent).
+// Signed/paid by the platform. Safe to call repeatedly.
+export async function ensureMerchantAta(
+  platform: TransactionSigner,
+  merchantWallet: Address,
+  mint: Address
+) {
+  const ix = await getCreateAssociatedTokenIdempotentInstructionAsync({
+    payer: platform,
+    owner: merchantWallet,
+    mint,
+  });
+
+  const rpc = createSolanaRpc(RPC_URL);
+  const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
+
+  const message = pipe(
+    createTransactionMessage({ version: 0 }),
+    (m) => setTransactionMessageFeePayerSigner(platform, m),
+    (m) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, m),
+    (m) => appendTransactionMessageInstruction(ix, m)
+  );
+
+  // Keypair signer: sign locally, then send the raw transaction.
+  const signed = await signTransactionMessageWithSigners(message);
+  const wire = getBase64EncodedWireTransaction(signed);
+  const sig = await rpc
+    .sendTransaction(wire, { encoding: "base64", skipPreflight: false })
+    .send();
+  return sig;
 }
 
 // MERCHANT (or payer): create a plan. Returns the plan PDA + bump.
