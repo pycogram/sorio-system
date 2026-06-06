@@ -17,7 +17,7 @@ export async function GET(
 
   const { data, error } = await db
     .from("plans")
-    .select("plan_pda, name, amount, token_mint, period_seconds, merchants(name, destination_wallet)")
+    .select("plan_pda, name, amount, merchant_amount, token_mint, period_seconds, merchants(name, destination_wallet)")
     .eq("plan_pda", planPda)
     .maybeSingle();
 

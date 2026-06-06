@@ -12,6 +12,7 @@ interface Env {
   SUPABASE_SERVICE_ROLE_KEY: string;
   PULLER_SECRET: string;
   SOLANA_RPC_URL: string;
+  PLATFORM_FEE_WALLET: string;
 }
 
 export default {
@@ -24,7 +25,7 @@ export default {
 
     const { data: due, error } = await db
       .from("subscriptions")
-      .select("id, subscriber_wallet, subscription_pda, plans(amount, period_seconds, plan_pda, token_mint)")
+      .select("id, subscriber_wallet, subscription_pda, plans(amount, merchant_amount, period_seconds, plan_pda, token_mint, merchants(destination_wallet))")
       .eq("status", "active")
       .lte("next_collection_at", nowIso);
 
@@ -43,35 +44,64 @@ export default {
     const pullerBytes = new Uint8Array(JSON.parse(env.PULLER_SECRET));
     const { client, signer: puller } = await makeClient(pullerBytes);
 
-    // Collector's receiving USDC account.
-    const [receiverAta] = await findAssociatedTokenPda({
-      owner: puller.address,
-      mint: address(due[0].plans.token_mint),
-      tokenProgram: TOKEN_PROGRAM,
-    });
-
     for (const sub of due) {
       const plan: any = sub.plans;
-      console.log(`\n-- subscription ${sub.id}, amount ${plan.amount}`);
+      
+      const destWallet = plan.merchants?.destination_wallet;
+      
+      if (!destWallet) {
+        console.log(`   skip ${sub.id}: no merchant destination wallet`);
+        continue;
+      }
+
+      // Amounts: total = what the customer authorized; merchantAmount = what the
+      // merchant receives; fee = the rest (goes to the platform fee wallet).
+      const total = BigInt(plan.amount);
+      const merchantAmount = plan.merchant_amount != null ? BigInt(plan.merchant_amount) : total;
+      const feeAmount = total - merchantAmount;
+
+      const [merchantAta] = await findAssociatedTokenPda({
+        owner: address(destWallet),
+        mint: address(plan.token_mint),
+        tokenProgram: TOKEN_PROGRAM,
+      });
+      const [feeAta] = await findAssociatedTokenPda({
+        owner: address(env.PLATFORM_FEE_WALLET),
+        mint: address(plan.token_mint),
+        tokenProgram: TOKEN_PROGRAM,
+      });
+
+      console.log(`\n-- subscription ${sub.id}, total ${total} (merchant ${merchantAmount}, fee ${feeAmount})`);
 
       let ok = false;
       let sig: string | null = null;
       let reason: string | null = null;
-
       try {
+        // Pull #1: merchant's share, direct customer -> merchant.
         const result = await collectPayment(client, puller, {
-          amount: BigInt(plan.amount),
+          amount: merchantAmount,
           delegator: address(sub.subscriber_wallet),
           mint: address(plan.token_mint),
           planPda: address(plan.plan_pda),
-          receiverAta,
+          receiverAta: merchantAta,
         });
-        ok = true;
         sig = result.signature;
-        console.log("   *** COLLECTED ***", sig);
+        console.log("   *** COLLECTED (merchant) ***", sig);
 
+        // Pull #2: platform fee, direct customer -> fee wallet (same period).
+        if (feeAmount > 0n) {
+          const feeResult = await collectPayment(client, puller, {
+            amount: feeAmount,
+            delegator: address(sub.subscriber_wallet),
+            mint: address(plan.token_mint),
+            planPda: address(plan.plan_pda),
+            receiverAta: feeAta,
+          });
+          console.log("   *** FEE COLLECTED ***", feeResult.signature);
+        }
+
+        ok = true;
       } catch (e: any) {
-        
         reason = e?.message ?? String(e);
         console.log("   collection failed:", reason);
       }
