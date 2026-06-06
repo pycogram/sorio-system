@@ -1,18 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ConnectButton, useWallet } from "./wallet";
-
-function useTheme() {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
-  return { theme, toggle: () => setTheme((t) => (t === "light" ? "dark" : "light")) };
-}
+import { useState } from "react";
+import { Navbar } from "../navbar";
+import { useWallet } from "../providers";
 
 export default function CreatePlanPage() {
-  const { theme, toggle } = useTheme();
   const { address } = useWallet();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,22 +47,7 @@ export default function CreatePlanPage() {
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       {/* nav */}
-      <nav className="flex items-center justify-between px-8 py-5 border-b border-[var(--border)]">
-        <div className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-lg bg-[var(--primary)]" />
-          <span className="text-lg font-semibold tracking-tight">Paylo</span>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <button
-            onClick={toggle}
-            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm transition hover:border-[var(--primary)]"
-          >
-            {theme === "light" ? "Dark" : "Light"}
-          </button>
-          <ConnectButton />
-        </div>
-      </nav>
+      <Navbar />
 
       <div className="mx-auto max-w-5xl px-8 py-14">
         <h1 className="text-3xl font-semibold tracking-tight">Create a plan</h1>

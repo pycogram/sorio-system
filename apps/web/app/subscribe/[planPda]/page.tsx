@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
-import { ConnectButton, useWallet } from "../../create/wallet";
+import { Navbar } from "../../navbar";
+import { useWallet } from "../../providers";
 import { runSubscribe } from "./subscribe-action";
 
 type Plan = {
@@ -17,21 +18,12 @@ type Plan = {
 const periodLabel = (s: number) =>
   s === 604800 ? "week" : s === 2592000 ? "month" : s === 31536000 ? "year" : `${s / 3600}h`;
 
-function useTheme() {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
-  return { theme, toggle: () => setTheme((t) => (t === "light" ? "dark" : "light")) };
-}
-
 export default function SubscribePage({
   params,
 }: {
   params: Promise<{ planPda: string }>;
 }) {
   const { planPda } = use(params);
-  const { theme, toggle } = useTheme();
   const { address } = useWallet();
   const [plan, setPlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,21 +55,7 @@ export default function SubscribePage({
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <nav className="flex items-center justify-between px-8 py-5 border-b border-[var(--border)]">
-        <div className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-lg bg-[var(--primary)]" />
-          <span className="text-lg font-semibold tracking-tight">Paylo</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={toggle}
-            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm transition hover:border-[var(--primary)]"
-          >
-            {theme === "light" ? "Dark" : "Light"}
-          </button>
-          <ConnectButton />
-        </div>
-      </nav>
+      <Navbar />
 
       <div className="mx-auto grid max-w-5xl grid-cols-1 gap-12 px-8 py-16 md:grid-cols-2 md:py-24">
         {/* LEFT — context & trust */}
