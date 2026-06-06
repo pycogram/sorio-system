@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState, useCallback } from "react";
 
 type PhantomProvider = {
@@ -26,28 +25,70 @@ function setShared(a: string | null) {
   listeners.forEach((fn) => fn(a));
 }
 
+let providerListenersBound = false;
+// Try to get the provider, retrying briefly since Phantom may inject after load.
+function waitForProvider(maxMs = 3000): Promise<PhantomProvider | null> {
+  return new Promise((resolve) => {
+    const existing = getProvider();
+    if (existing) return resolve(existing);
+    const start = Date.now();
+    const iv = setInterval(() => {
+      const p = getProvider();
+      if (p || Date.now() - start > maxMs) {
+        clearInterval(iv);
+        resolve(p);
+      }
+    }, 100);
+  });
+}
+
 export function useWallet() {
   const [address, setAddress] = useState<string | null>(sharedAddress);
   const [available, setAvailable] = useState(false);
 
   useEffect(() => {
     listeners.add(setAddress);
-    const p = getProvider();
-    setAvailable(!!p);
-    if (p && sharedAddress === null) {
-      p.connect({ onlyIfTrusted: true })
-        .then((r) => setShared(r.publicKey.toString()))
-        .catch(() => {});
-      p.on("disconnect", () => setShared(null));
-      p.on("accountChanged", (pk: any) => setShared(pk ? pk.toString() : null));
+    // Synchronously check if Phantom is already connected (handles back-navigation).
+    const immediate = getProvider();
+    if (immediate?.publicKey) {
+      setShared(immediate.publicKey.toString());
+    } else {
+      setAddress(sharedAddress);
     }
+
+    let cancelled = false;
+    waitForProvider().then((p) => {
+      if (cancelled || !p) return;
+      setAvailable(true);
+
+      // Bind provider events once.
+      if (!providerListenersBound) {
+        providerListenersBound = true;
+        p.on("disconnect", () => setShared(null));
+        p.on("accountChanged", (pk: any) => setShared(pk ? pk.toString() : null));
+      }
+
+      // If Phantom already has a public key (still connected from before), use it.
+      if (p.publicKey) {
+        setShared(p.publicKey.toString());
+        return;
+      }
+      // Otherwise try a silent reconnect.
+      if (sharedAddress === null) {
+        p.connect({ onlyIfTrusted: true })
+          .then((r) => setShared(r.publicKey.toString()))
+          .catch(() => {});
+      }
+    });
+
     return () => {
+      cancelled = true;
       listeners.delete(setAddress);
     };
   }, []);
 
   const connect = useCallback(async () => {
-    const p = getProvider();
+    const p = (await waitForProvider()) ?? getProvider();
     if (!p) {
       window.open("https://phantom.app/", "_blank");
       return;
@@ -72,7 +113,6 @@ export function useWallet() {
 export function ConnectButton() {
   const { address, connect, disconnect } = useWallet();
   const short = address ? `${address.slice(0, 4)}…${address.slice(-4)}` : null;
-
   return (
     <button
       onClick={address ? disconnect : connect}
