@@ -124,6 +124,128 @@ export default {
       }
     }
 
+    // ===== PAYROLL (Paylo Roll) =====
+    const FEE_PERCENT = 2;
+
+    const { data: payrolls, error: pErr } = await db
+      .from("payrolls")
+      .select("id, employer_wallet, period_seconds, token_mint, payroll_items(id, employee_wallet, amount, status, plan_pda, subscription_pda, next_payment_at)")
+      .order("created_at", { ascending: false });
+
+    if (pErr) {
+      console.error("payroll query failed:", pErr.message);
+    } else {
+      for (const pr of payrolls ?? []) {
+        const employer = pr.employer_wallet;
+        const mint = pr.token_mint;
+        const items = (pr.payroll_items ?? []).filter(
+          (i: any) =>
+            i.status === "active" &&
+            i.plan_pda &&
+            (!i.next_payment_at || i.next_payment_at <= nowIso)
+        );
+        if (items.length === 0) continue;
+
+        // Compute total needed for this payroll run (all salaries + all fees).
+        let totalNeeded = 0n;
+        for (const i of items) {
+          const salary = BigInt(i.amount);
+          const fee = (salary * BigInt(Math.round(FEE_PERCENT * 100))) / 10000n;
+          totalNeeded += salary + fee;
+        }
+
+        // Pre-check: employer's USDC balance must cover the whole run.
+        const [employerAta] = await findAssociatedTokenPda({
+          owner: address(employer),
+          mint: address(mint),
+          tokenProgram: TOKEN_PROGRAM,
+        });
+        let balance = 0n;
+        try {
+          const bal = await client.rpc.getTokenAccountBalance(employerAta).send();
+          balance = BigInt(bal.value.amount);
+        } catch (e: any) {
+          console.log(`payroll ${pr.id}: cannot read employer balance, skipping`);
+          continue;
+        }
+
+        if (balance < totalNeeded) {
+          console.log(`payroll ${pr.id}: insufficient funds (need ${totalNeeded}, have ${balance}) — skipping whole run`);
+          continue;
+        }
+
+        const [feeAta] = await findAssociatedTokenPda({
+          owner: address(env.PLATFORM_FEE_WALLET),
+          mint: address(mint),
+          tokenProgram: TOKEN_PROGRAM,
+        });
+
+        // Pay each employee: FEE FIRST, then salary.
+        for (const i of items) {
+          const salary = BigInt(i.amount);
+          const fee = (salary * BigInt(Math.round(FEE_PERCENT * 100))) / 10000n;
+
+          const [employeeAta] = await findAssociatedTokenPda({
+            owner: address(i.employee_wallet),
+            mint: address(mint),
+            tokenProgram: TOKEN_PROGRAM,
+          });
+
+          let ok = false;
+          let sig: string | null = null;
+          let reason: string | null = null;
+          try {
+            // Pull #1: FEE first (employer -> fee wallet).
+            if (fee > 0n) {
+              const feeRes = await collectPayment(client, puller, {
+                amount: fee,
+                delegator: address(employer),
+                mint: address(mint),
+                planPda: address(i.plan_pda),
+                receiverAta: feeAta,
+              });
+              console.log(`   payroll ${i.id} FEE collected`, feeRes.signature);
+            }
+            // Pull #2: SALARY (employer -> employee).
+            const salRes = await collectPayment(client, puller, {
+              amount: salary,
+              delegator: address(employer),
+              mint: address(mint),
+              planPda: address(i.plan_pda),
+              receiverAta: employeeAta,
+            });
+            sig = salRes.signature;
+            console.log(`   payroll ${i.id} SALARY paid`, sig);
+            ok = true;
+          } catch (e: any) {
+            reason = e?.message ?? String(e);
+            console.log(`   payroll ${i.id} failed:`, reason);
+          }
+
+          // Record payment in history (success or failure).
+          await db.from("payroll_history").insert({
+            payroll_item_id: i.id,
+            amount: Number(salary),
+            fee: Number(fee),
+            status: ok ? "success" : "failed",
+            salary_tx: sig,
+            fee_tx: null,
+            failure_reason: reason,
+          });
+
+          // Advance schedule only on success.
+          if (ok) {
+            const next = new Date(Date.now() + pr.period_seconds * 1000).toISOString();
+            await db
+              .from("payroll_items")
+              .update({ next_payment_at: next, last_payment_at: nowIso })
+              .eq("id", i.id);
+            console.log(`   payroll ${i.id} advanced to ${next}`);
+          }
+        }
+      }
+    }
+
     console.log("\ncron done");
   },
 } satisfies ExportedHandler<Env>;
