@@ -1,34 +1,483 @@
 "use client";
 
-import { Navbar } from "./navbar";
+import Image from "next/image";
+import { useTheme } from "./providers";
 
 export default function Home() {
+  const { theme, toggle } = useTheme();
+
   return (
-    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <Navbar />
-      <div className="mx-auto max-w-3xl px-8 py-32 text-center">
-        <h1 className="text-5xl font-semibold tracking-tight">
-          Recurring payments on Solana
-        </h1>
-        <p className="mx-auto mt-6 max-w-xl text-lg text-[var(--muted)]">
-          Set your terms once, share a link, and get paid automatically every cycle —
-          no card, no bank, paid in USDC. Cancel anytime.
-        </p>
-        <div className="mt-10 flex items-center justify-center gap-4">
-          <a
-            href="/create"
-            className="rounded-lg bg-[var(--btn)] px-6 py-3 font-medium text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)]"
+    <main className="relative min-h-screen overflow-hidden bg-[var(--background)] text-[var(--foreground)]">
+      {/* Atmospheric glow */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[600px]"
+        style={{
+          background:
+            "radial-gradient(60% 80% at 50% 0%, color-mix(in srgb, var(--primary) 28%, transparent) 0%, transparent 70%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-0 opacity-[0.04]"
+        style={{
+          backgroundImage:
+            "linear-gradient(var(--foreground) 1px, transparent 1px), linear-gradient(90deg, var(--foreground) 1px, transparent 1px)",
+          backgroundSize: "64px 64px",
+          maskImage: "radial-gradient(70% 50% at 50% 0%, #000 0%, transparent 80%)",
+        }}
+      />
+
+      {/* Woven-bars brand motif (echoes the logo) */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute right-0 top-20 z-0 hidden opacity-[0.07] lg:block"
+        style={{ transform: "rotate(45deg)" }}
+      >
+        <svg width="520" height="520" viewBox="0 0 520 520" fill="none">
+          {Array.from({ length: 7 }).map((_, row) =>
+            Array.from({ length: 7 }).map((_, col) => {
+              // skip some cells to create the woven gap pattern
+              if ((row + col) % 2 === 1) return null;
+              return (
+                <rect
+                  key={`${row}-${col}`}
+                  x={col * 72}
+                  y={row * 72}
+                  width={54}
+                  height={16}
+                  rx={6}
+                  fill="var(--primary)"
+                />
+              );
+            })
+          )}
+        </svg>
+      </div>
+
+      {/* Header */}
+      <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-8 py-5">
+        <div className="flex items-center gap-2">
+          <Image src="/z-paylo-logo.png" alt="Paylo" width={30} height={30} className="rounded-lg" />
+          <span className="text-lg font-semibold tracking-tight">Paylo</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={toggle}
+            aria-label="Toggle theme"
+            className="rounded-lg border border-[var(--border)] p-2 transition hover:border-[var(--primary)]"
           >
-            Create a plan
-          </a>
-          <a
-            href="/dashboard"
-            className="rounded-lg border border-[var(--border)] px-6 py-3 font-medium transition hover:border-[var(--foreground)]"
-          >
-            Dashboard
+            {theme === "light" ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </svg>
+            )}
+          </button>
+          <a href="/dashboard" className="rounded-lg bg-[var(--btn)] px-4 py-2 text-sm font-medium text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)]">
+            Launch app
           </a>
         </div>
-      </div>
+      </header>
+
+      {/* Hero */}
+      <section className="relative z-10 mx-auto max-w-6xl px-8 pt-16 pb-24">
+        <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-2">
+          {/* Left: copy */}
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card)] px-3 py-1 text-xs font-medium text-[var(--muted)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
+              Live on Solana devnet
+            </div>
+            <h1 className="mt-6 text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
+              Get paid<br />on <span className="text-[var(--primary)]">repeat.</span>
+            </h1>
+            <p className="mt-6 max-w-md text-lg text-[var(--muted)]">
+              Recurring payments and payroll in USDC. Set your terms once, share a link,
+              and collect automatically every cycle. Approve once on-chain, cancel anytime.
+            </p>
+            <div className="mt-9 flex flex-wrap items-center gap-3">
+              <a href="/create" className="rounded-lg bg-[var(--btn)] px-6 py-3 font-medium text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)]">
+                Create a plan
+              </a>
+              <a href="/dashboard" className="rounded-lg border border-[var(--border)] px-6 py-3 font-medium transition hover:border-[var(--foreground)]">
+                Open dashboard
+              </a>
+            </div>
+            <p className="mt-6 text-sm text-[var(--muted)]">
+              Non-custodial · No cards · No banks
+            </p>
+          </div>
+
+          {/* Right: product mockup */}
+          <div className="relative">
+            <div
+              aria-hidden
+              className="absolute -inset-6 z-0 rounded-3xl opacity-60 blur-2xl"
+              style={{ background: "color-mix(in srgb, var(--primary) 25%, transparent)" }}
+            />
+            <div className="relative z-10 rotate-[-1.5deg] rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-2xl">
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">Pro Membership</p>
+              <p className="mt-2 text-4xl font-semibold tracking-tight">
+                $9.99<span className="text-base font-normal text-[var(--muted)]"> / month</span>
+              </p>
+              <div className="my-5 h-px bg-[var(--border)]" />
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[var(--muted)]">Subscription</span><span>$9.80</span>
+              </div>
+              <div className="mt-2 flex items-center justify-between text-sm">
+                <span className="text-[var(--muted)]">Service fee</span><span>$0.19</span>
+              </div>
+              <div className="my-3 h-px bg-[var(--border)]" />
+              <div className="flex items-center justify-between text-sm font-semibold">
+                <span>Total</span><span>$9.99</span>
+              </div>
+              <div className="mt-5 w-full rounded-lg bg-[var(--btn)] py-2.5 text-center text-sm font-medium text-[var(--btn-text)]">
+                Subscribe
+              </div>
+              <p className="mt-3 text-center text-xs text-[var(--muted)]">Approve once · Cancel anytime</p>
+            </div>
+            {/* floating mini stat card */}
+            <div className="absolute -bottom-6 -left-6 z-20 rotate-[2deg] rounded-xl border border-[var(--border)] bg-[var(--card)] px-5 py-4 shadow-xl">
+              <p className="text-xs text-[var(--muted)]">Collected today</p>
+              <p className="mt-1 text-xl font-semibold text-[var(--accent)]">+ $1,240.00</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Feature strip */}
+      <section className="relative z-10 border-y border-[var(--border)] bg-[var(--subtle)]">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-8 py-14 sm:grid-cols-3">
+          <Feature title="Non-custodial" body="Funds move straight from payer to recipient on-chain. Paylo never holds your money." />
+          <Feature title="You stay in control" body="The approved amount is a hard on-chain ceiling. Paylo can never take more, cancel anytime." />
+          <Feature title="Approve once" body="No re-signing every cycle. One wallet approval authorizes the recurring payment. Done." />
+        </div>
+      </section>
+
+      {/* Gallery */}
+      <section className="relative z-10 border-t border-[var(--border)]">
+        <div className="mx-auto max-w-6xl px-8 py-24">
+          <h2 className="text-center text-4xl font-semibold tracking-tight">See Paylo in action</h2>
+          <p className="mx-auto mt-3 max-w-xl text-center text-[var(--muted)]">
+            From creating a plan to autonomous agent payments.
+          </p>
+          <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-2">
+            <GalleryItem src="/image1.png" caption="Create a plan and share a link" />
+            <GalleryItem src="/image2.png" caption="Approve once, on-chain" />
+            <GalleryItem src="/image3.png" caption="Collected automatically every cycle" />
+            <GalleryItem src="/image4.png" caption="Give an AI agent a bounded budget" />
+          </div>
+        </div>
+      </section>
+
+      {/* Three products */}
+      <section className="relative z-10 mx-auto max-w-6xl px-8 py-24">
+        <h2 className="text-center text-4xl font-semibold tracking-tight">One engine. Three products.</h2>
+        <p className="mx-auto mt-3 max-w-xl text-center text-[var(--muted)]">
+          The same recurring-payment rail, built for different jobs.
+        </p>
+        <div className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-3">
+          <ProductCard name="Paylo Scribe" tag="Live" tagLive body="Subscriptions for merchants. Create plans, share a link, get paid automatically. Customers subscribe and cancel anytime." />
+          <ProductCard name="Paylo Roll" tag="Coming soon" body="Payroll on the same rail. Pay employees and contractors on a recurring schedule, in stablecoins, on-chain." />
+          <ProductCard name="Paylo API" tag="Coming soon" body="Infrastructure for builders. Integrate Paylo's recurring-payment rail directly into your own product." />
+        </div>
+      </section>
+
+      {/* AI agents */}
+      <section className="relative z-10 overflow-hidden border-t border-[var(--border)]">
+        {/* accent glow */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-0 opacity-50"
+          style={{
+            background:
+              "radial-gradient(50% 70% at 80% 50%, color-mix(in srgb, var(--primary) 18%, transparent) 0%, transparent 70%)",
+          }}
+        />
+        <div className="relative z-10 mx-auto max-w-6xl px-8 py-24">
+          <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-2">
+            {/* Left: visual */}
+            <div className="relative order-2 lg:order-1">
+              <div
+                aria-hidden
+                className="absolute -inset-6 z-0 rounded-3xl opacity-50 blur-2xl"
+                style={{ background: "color-mix(in srgb, var(--primary) 22%, transparent)" }}
+              />
+              <div className="relative z-10 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-7 shadow-2xl">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="flex h-11 w-11 items-center justify-center rounded-xl"
+                    style={{ background: "color-mix(in srgb, var(--primary) 16%, transparent)" }}
+                  >
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="10" rx="2" />
+                      <circle cx="12" cy="5" r="2" /><path d="M12 7v4" />
+                      <line x1="8" y1="16" x2="8" y2="16" /><line x1="16" y1="16" x2="16" y2="16" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-semibold">Agent wallet</p>
+                    <p className="text-xs text-[var(--muted)]">Authorized · bounded</p>
+                  </div>
+                </div>
+                <div className="mt-6 space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-[var(--muted)]">Monthly budget</span>
+                    <span className="font-medium">$50.00 max</span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--subtle)]">
+                    <div className="h-full rounded-full" style={{ width: "36%", background: "var(--primary)" }} />
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--muted)]">Spent this cycle</span>
+                    <span className="font-medium">$18.00</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--muted)]">Hard ceiling</span>
+                    <span className="font-medium text-[var(--accent)]">Cannot exceed</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: copy */}
+            <div className="order-1 lg:order-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card)] px-3 py-1 text-xs font-medium text-[var(--muted)]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary)]" />
+                For AI agents
+              </div>
+              <h2 className="mt-6 text-4xl font-semibold leading-tight tracking-tight">
+                Give your AI agent<br />a wallet it can&apos;t abuse.
+              </h2>
+              <p className="mt-5 max-w-md text-[var(--muted)]">
+                Paylo&apos;s delegation model is built for autonomous payments. Authorize an agent to pay
+                for subscriptions, APIs, or services on a recurring basis within a hard, on-chain
+                spending limit it can never exceed. Revoke anytime.
+              </p>
+              <div className="mt-8 space-y-3">
+                <TrustRow text="Set a budget the agent physically cannot overspend" />
+                <TrustRow text="Recurring, autonomous payments, no human in the loop each cycle" />
+                <TrustRow text="Full transparency: every payment is on-chain and revocable" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className="relative z-10 border-t border-[var(--border)] bg-[var(--subtle)]">
+        <div className="mx-auto max-w-6xl px-8 py-24">
+          <h2 className="text-center text-4xl font-semibold tracking-tight">How it works</h2>
+          <p className="mx-auto mt-3 max-w-xl text-center text-[var(--muted)]">
+            From zero to recurring revenue in three steps.
+          </p>
+
+          <div className="relative mt-16 grid grid-cols-1 gap-6 md:grid-cols-3">
+            {/* connecting line (desktop) */}
+            <div
+              aria-hidden
+              className="absolute left-0 right-0 top-7 hidden h-px md:block"
+              style={{ background: "linear-gradient(90deg, transparent, var(--border), var(--border), transparent)" }}
+            />
+            <StepCard n="1" title="Create" body="Connect your wallet and set your plan: amount, billing period, and where payments land. Get a shareable link." />
+            <StepCard n="2" title="Subscribe" body="Your customer opens the link and approves once. They see exactly what they'll pay, broken down, before signing." />
+            <StepCard n="3" title="Collect" body="Payments are pulled automatically each cycle, straight to you, on-chain, with no manual invoicing." />
+          </div>
+
+          <div className="mt-16 text-center">
+            <a href="/create" className="rounded-lg bg-[var(--btn)] px-7 py-3 font-medium text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)]">
+              Get started
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust band */}
+      <section className="relative z-10 border-t border-[var(--border)]">
+        <div className="mx-auto max-w-6xl px-8 py-20">
+          <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
+            <div>
+              <h2 className="text-4xl font-semibold tracking-tight">
+                Secured on-chain.<br />Trustless by design.
+              </h2>
+              <p className="mt-5 max-w-md text-[var(--muted)]">
+                Every payment is authorized by the customer's own wallet and enforced by Solana's
+                audited Subscriptions Delegation Program. Paylo can never pull more than approved,
+                and funds never touch our hands.
+              </p>
+              <div className="mt-8 space-y-3">
+                <TrustRow text="Customer-signed, on-chain authorization" />
+                <TrustRow text="Hard spending ceiling enforced by the program" />
+                <TrustRow text="Cancel anytime and it revokes instantly on-chain" />
+              </div>
+            </div>
+
+            {/* Visual: a "verified payment" card built from UI */}
+            <div className="relative">
+              <div
+                aria-hidden
+                className="absolute -inset-6 z-0 rounded-3xl opacity-50 blur-2xl"
+                style={{ background: "color-mix(in srgb, var(--accent) 20%, transparent)" }}
+              />
+              <div className="relative z-10 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-7 shadow-2xl">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="flex h-11 w-11 items-center justify-center rounded-full"
+                    style={{ background: "color-mix(in srgb, var(--accent) 18%, transparent)" }}
+                  >
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-semibold">Payment authorized</p>
+                    <p className="text-xs text-[var(--muted)]">Signed on Solana · devnet</p>
+                  </div>
+                </div>
+                <div className="mt-6 space-y-3 text-sm">
+                  <div className="flex justify-between"><span className="text-[var(--muted)]">Amount</span><span className="font-medium">$9.99 / month</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--muted)]">Ceiling</span><span className="font-medium">$9.99 (max)</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--muted)]">Custody</span><span className="font-medium text-[var(--accent)]">Non-custodial</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="relative z-10 border-t border-[var(--border)] bg-[var(--subtle)]">
+        <div className="mx-auto max-w-6xl px-8 py-16">
+          <div className="grid grid-cols-2 gap-10 sm:grid-cols-4 lg:grid-cols-5">
+            {/* Brand column */}
+            <div className="col-span-2">
+              <div className="flex items-center gap-2">
+                <Image src="/z-paylo-logo.png" alt="Paylo" width={28} height={28} className="rounded-lg" />
+                <span className="text-lg font-semibold tracking-tight">Paylo</span>
+              </div>
+              <p className="mt-4 max-w-xs text-sm text-[var(--muted)]">
+                Recurring payments and payroll on Solana. Approve once, get paid on repeat.
+                Non-custodial by design.
+              </p>
+              <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card)] px-3 py-1 text-xs font-medium text-[var(--muted)]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
+                Live on Solana devnet
+              </div>
+            </div>
+
+            {/* Products */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Products</p>
+              <ul className="mt-4 space-y-3 text-sm">
+                <li><a href="/create" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Paylo Scribe</a></li>
+                <li><span className="text-[var(--muted)] opacity-60">Paylo Roll</span> <span className="ml-1 text-[10px] text-[var(--muted)]">soon</span></li>
+                <li><span className="text-[var(--muted)] opacity-60">Paylo API</span> <span className="ml-1 text-[10px] text-[var(--muted)]">soon</span></li>
+              </ul>
+            </div>
+
+            {/* App */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">App</p>
+              <ul className="mt-4 space-y-3 text-sm">
+                <li><a href="/dashboard" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Dashboard</a></li>
+                <li><a href="/create" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Create a plan</a></li>
+                <li><a href="/subscriptions" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Subscriptions</a></li>
+              </ul>
+            </div>
+
+            {/* Resources */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Resources</p>
+              <ul className="mt-4 space-y-3 text-sm">
+                <li><a href="https://github.com/pycogram/paylo-system" target="_blank" rel="noreferrer" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">GitHub</a></li>
+                <li><a href="https://solana.com" target="_blank" rel="noreferrer" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Solana</a></li>
+                <li><span className="text-[var(--muted)] opacity-60">Docs</span> <span className="ml-1 text-[10px] text-[var(--muted)]">soon</span></li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom bar */}
+          <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-[var(--border)] pt-8 text-sm text-[var(--muted)] sm:flex-row">
+            <p>© {new Date().getFullYear()} Paylo. All rights reserved.</p>
+            <p>Built on the Solana Foundation Subscriptions Delegation Program</p>
+          </div>
+        </div>
+      </footer>
     </main>
+  );
+}
+
+function Feature({ title, body }: { title: string; body: string }) {
+  return (
+    <div>
+      <div className="mb-3 h-1 w-8 rounded-full bg-[var(--primary)]" />
+      <p className="font-semibold">{title}</p>
+      <p className="mt-2 text-sm text-[var(--muted)]">{body}</p>
+    </div>
+  );
+}
+
+function ProductCard({ name, tag, body, tagLive }: { name: string; tag: string; body: string; tagLive?: boolean }) {
+  return (
+    <div className="group rounded-2xl border border-[var(--border)] bg-[var(--card)] p-7 transition hover:border-[var(--primary)] hover:shadow-xl">
+      <div className="flex items-center justify-between">
+        <p className="text-lg font-semibold">{name}</p>
+        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${tagLive ? "bg-[var(--accent)] text-black" : "border border-[var(--border)] text-[var(--muted)]"}`}>
+          {tag}
+        </span>
+      </div>
+      <p className="mt-3 text-sm text-[var(--muted)]">{body}</p>
+    </div>
+  );
+}
+
+function StepCard({ n, title, body }: { n: string; title: string; body: string }) {
+  return (
+    <div className="relative z-10 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-7 transition hover:border-[var(--primary)] hover:shadow-xl">
+      <div
+        className="flex h-14 w-14 items-center justify-center rounded-2xl text-xl font-bold text-white shadow-lg"
+        style={{ background: "var(--primary)", boxShadow: "0 8px 24px color-mix(in srgb, var(--primary) 40%, transparent)" }}
+      >
+        {n}
+      </div>
+      <p className="mt-5 text-lg font-semibold">{title}</p>
+      <p className="mt-2 text-sm text-[var(--muted)]">{body}</p>
+    </div>
+  );
+}
+
+function TrustRow({ text }: { text: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 6L9 17l-5-5" />
+      </svg>
+      <span className="text-sm">{text}</span>
+    </div>
+  );
+}
+
+function GalleryItem({ src, caption }: { src: string; caption: string }) {
+  return (
+    <figure className="group overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] transition hover:border-[var(--primary)] hover:shadow-xl">
+      <div className="overflow-hidden">
+        <Image
+          src={src}
+          alt={caption}
+          width={1536}
+          height={1024}
+          className="w-full transition duration-300 group-hover:scale-[1.02]"
+        />
+      </div>
+      <figcaption className="px-5 py-4 text-sm text-[var(--muted)]">{caption}</figcaption>
+    </figure>
   );
 }
