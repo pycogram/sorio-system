@@ -52,10 +52,19 @@ export default function SubscribePage({
   }, [address, plan]);
 
   const period = plan ? periodLabel(plan.period_seconds) : "";
+  const isOwnPlan = !!(
+    address &&
+    plan?.merchants?.destination_wallet &&
+    address === plan.merchants.destination_wallet
+  );
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <Navbar />
+
+      <div className="mx-auto max-w-5xl px-8 pt-8">
+        <a href="/dashboard" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)]">← Dashboard</a>
+      </div>
 
       <div className="mx-auto grid max-w-5xl grid-cols-1 gap-12 px-8 py-16 md:grid-cols-2 md:py-24">
         {/* LEFT — context & trust */}
@@ -128,7 +137,7 @@ export default function SubscribePage({
               </div>
 
               <button
-                disabled={!address || alreadySubscribed || subscribing || done}
+                disabled={!address || alreadySubscribed || subscribing || done || isOwnPlan}
                 onClick={async () => {
                   if (!plan || !address) return;
                   setSubscribing(true);
@@ -150,6 +159,8 @@ export default function SubscribePage({
               >
                 {done
                   ? "Subscribed ✓"
+                  : isOwnPlan
+                  ? "This is your plan"
                   : alreadySubscribed
                   ? "Already subscribed ✓"
                   : subscribing
@@ -159,6 +170,11 @@ export default function SubscribePage({
                   : "Connect wallet to subscribe"}
               </button>
 
+              {isOwnPlan && (
+                <p className="mt-3 text-center text-sm text-[var(--muted)]">
+                  You can&apos;t subscribe to your own plan.
+                </p>
+              )}
               {done && (
                 <p className="mt-3 text-center text-sm text-[var(--accent)]">
                   You're all set. Payments will renew automatically.

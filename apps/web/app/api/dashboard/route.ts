@@ -13,7 +13,26 @@ export async function GET(req: NextRequest) {
     { auth: { persistSession: false } }
   );
 
-  // Find the merchant by destination wallet.
+  // --- Customer view: subscriptions where THIS wallet is the subscriber ---
+  const { data: mySubsRaw } = await db
+    .from("subscriptions")
+    .select("id, subscription_pda, status, next_collection_at, plan_id, plans(plan_pda, name, amount, merchant_amount, period_seconds, merchants(name))")
+    .eq("subscriber_wallet", wallet)
+    .order("subscribed_at", { ascending: false });
+
+  const mySubscriptions = (mySubsRaw ?? []).map((s: any) => ({
+    id: s.id,
+    subscription_pda: s.subscription_pda,
+    status: s.status,
+    next_collection_at: s.next_collection_at,
+    plan_pda: s.plans?.plan_pda ?? null,
+    plan_name: s.plans?.name ?? "Plan",
+    amount: s.plans?.amount ?? 0,
+    period_seconds: s.plans?.period_seconds ?? 0,
+    merchant_name: s.plans?.merchants?.name ?? "Merchant",
+  }));
+
+  // --- Merchant view: plans created by this wallet ---
   const { data: merchant } = await db
     .from("merchants")
     .select("id, name")
@@ -21,10 +40,16 @@ export async function GET(req: NextRequest) {
     .maybeSingle();
 
   if (!merchant) {
-    return NextResponse.json({ merchant: null, plans: [], totalRevenue: 0, recentPayments: [] });
+    // Not a merchant — return only the customer view.
+    return NextResponse.json({
+      merchant: null,
+      plans: [],
+      totalRevenue: 0,
+      recentPayments: [],
+      mySubscriptions,
+    });
   }
 
-  // All plans for this merchant.
   const { data: plans } = await db
     .from("plans")
     .select("id, plan_pda, name, amount, merchant_amount, period_seconds, active")
@@ -33,7 +58,6 @@ export async function GET(req: NextRequest) {
 
   const planIds = (plans ?? []).map((p) => p.id);
 
-  // Subscriptions across those plans.
   const { data: subs } = planIds.length
     ? await db
         .from("subscriptions")
@@ -41,7 +65,6 @@ export async function GET(req: NextRequest) {
         .in("plan_id", planIds)
     : { data: [] as any[] };
 
-  // Recent payments (billing_history) for those subscriptions.
   const subIds = (subs ?? []).map((s) => s.id);
   const { data: payments } = subIds.length
     ? await db
@@ -49,11 +72,9 @@ export async function GET(req: NextRequest) {
         .select("id, subscription_id, amount, status, tx_signature, attempted_at")
         .in("subscription_id", subIds)
         .order("attempted_at", { ascending: false })
-        .limit(20)
+        .limit(200)
     : { data: [] as any[] };
 
-  // Total revenue = merchant's share of successful collections.
-  // Each successful payment's merchant portion = the plan's merchant_amount.
   const planById = new Map((plans ?? []).map((p) => [p.id, p]));
   const subById = new Map((subs ?? []).map((s) => [s.id, s]));
   let totalRevenue = 0;
@@ -64,7 +85,6 @@ export async function GET(req: NextRequest) {
     if (plan) totalRevenue += plan.merchant_amount ?? plan.amount;
   }
 
-  // Attach subscribers to each plan.
   const plansWithSubs = (plans ?? []).map((p) => ({
     ...p,
     subscribers: (subs ?? []).filter((s) => s.plan_id === p.id),
@@ -75,5 +95,6 @@ export async function GET(req: NextRequest) {
     plans: plansWithSubs,
     totalRevenue,
     recentPayments: payments ?? [],
+    mySubscriptions,
   });
 }

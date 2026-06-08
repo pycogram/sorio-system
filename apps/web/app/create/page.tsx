@@ -50,7 +50,8 @@ export default function CreatePlanPage() {
       <Navbar />
 
       <div className="mx-auto max-w-5xl px-8 py-14">
-        <h1 className="text-3xl font-semibold tracking-tight">Create a plan</h1>
+        <a href="/dashboard" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)]">← Dashboard</a>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight">Create a plan</h1>
         <p className="mt-2 text-[var(--muted)]">
           Set your terms once. Share the link. Get paid automatically every cycle.
         </p>
