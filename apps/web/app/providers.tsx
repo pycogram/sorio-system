@@ -45,21 +45,21 @@ const ThemeContext = createContext<ThemeCtx>({ theme: "light", toggle: () => {} 
 export function useWallet() { return useContext(WalletContext); }
 export function useTheme() { return useContext(ThemeContext); }
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({
+  children,
+  initialTheme = "dark",
+}: {
+  children: React.ReactNode;
+  initialTheme?: "light" | "dark";
+}) {
   const [address, setAddress] = useState<string | null>(null);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setTheme] = useState<"light" | "dark">(initialTheme);
   const [bound, setBound] = useState(false);
 
-  // Load saved theme on first mount.
-  useEffect(() => {
-    const saved = localStorage.getItem("paylo-theme");
-    if (saved === "dark" || saved === "light") setTheme(saved);
-  }, []);
-
-  // Apply + persist whenever theme changes.
+  // Apply theme to <html> and persist to a cookie (server-readable, no flash).
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("paylo-theme", theme);
+    document.cookie = `paylo-theme=${theme}; path=/; max-age=31536000; SameSite=Lax`;
   }, [theme]);
 
   useEffect(() => {

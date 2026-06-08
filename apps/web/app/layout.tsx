@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -18,24 +19,22 @@ export const metadata: Metadata = {
   description: "Recurring payments on Solana",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const theme = cookieStore.get("paylo-theme")?.value === "light" ? "light" : "dark";
+
   return (
     <html
       lang="en"
+      data-theme={theme}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('paylo-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}`,
-          }}
-        />
-        <Providers>{children}</Providers>
+        <Providers initialTheme={theme}>{children}</Providers>
       </body>
     </html>
   );

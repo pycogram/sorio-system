@@ -1,18 +1,25 @@
 "use client";
+import Image from "next/image";
 import { useWallet, useTheme } from "./providers";
 
-export function Navbar() {
+export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { address, connect, disconnect } = useWallet();
   const { theme, toggle } = useTheme();
   const short = address ? `${address.slice(0, 4)}…${address.slice(-4)}` : null;
 
   return (
-    <nav className="flex items-center justify-between px-8 py-5 border-b border-[var(--border)]">
+    <nav className="flex items-center justify-between px-4 md:px-8 py-5 border-b border-[var(--border)]">
       <a href="/dashboard" className="flex items-center gap-2">
-        <div className="h-7 w-7 rounded-lg bg-[var(--primary)]" />
+        <Image src="/z-paylo-logo.png" alt="Paylo" width={28} height={28} className="rounded-lg" />
         <span className="text-lg font-semibold tracking-tight">Paylo</span>
       </a>
       <div className="flex items-center gap-4">
+        <button
+          onClick={address ? disconnect : connect}
+          className="rounded-lg border border-[var(--border)] px-4 py-1.5 text-sm font-medium transition hover:border-[var(--foreground)]"
+        >
+          {short ?? "Connect Wallet"}
+        </button>
         <button
           onClick={toggle}
           aria-label="Toggle theme"
@@ -38,12 +45,17 @@ export function Navbar() {
             </svg>
           )}
         </button>
-        <button
-          onClick={address ? disconnect : connect}
-          className="rounded-lg border border-[var(--border)] px-4 py-1.5 text-sm font-medium transition hover:border-[var(--foreground)]"
-        >
-          {short ?? "Connect Wallet"}
-        </button>
+        {onMenuClick && (
+          <button
+            onClick={onMenuClick}
+            aria-label="Open menu"
+            className="rounded-lg border border-[var(--border)] p-2 md:hidden"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+        )}
       </div>
     </nav>
   );
