@@ -1,221 +1,143 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Navbar } from "../navbar";
 import { useWallet } from "../providers";
+import { PayrollList } from "../payroll/payroll-list";
+import { SubscriptionsList } from "./subscriptions-list";
 
-type Subscriber = {
-  id: string;
-  subscriber_wallet: string;
-  status: string;
-  next_collection_at: string | null;
-  last_collection_at: string | null;
-};
-type Plan = {
-  id: string;
-  plan_pda: string;
-  name: string;
-  amount: number;
-  merchant_amount: number | null;
-  period_seconds: number;
-  active: boolean;
-  subscribers: Subscriber[];
-};
-type Payment = {
-  id: string;
-  subscription_id: string;
-  amount: number;
-  status: string;
-  tx_signature: string | null;
-  attempted_at: string;
-};
-type Data = {
-  merchant: { id: string; name: string } | null;
-  plans: Plan[];
-  totalRevenue: number;
-  recentPayments: Payment[];
+type Section = "overview" | "subscriptions" | "payroll" | "api";
+
+const icons: Record<Section, React.ReactNode> = {
+  overview: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+  ),
+  subscriptions: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6" /><path d="M1 20v-6h6" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>
+  ),
+  payroll: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+  ),
+  api: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
+  ),
 };
 
-const usd = (n: number) => `$${(n / 1_000_000).toFixed(2)}`;
-const periodLabel = (s: number) =>
-  s === 604800 ? "week" : s === 2592000 ? "month" : s === 31536000 ? "year" : `${s / 3600}h`;
-const short = (w: string) => `${w.slice(0, 4)}…${w.slice(-4)}`;
-const fmtDate = (d: string | null) =>
-  d ? new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—";
+const NAV: { id: Section; label: string; soon?: boolean }[] = [
+  { id: "overview", label: "Overview" },
+  { id: "subscriptions", label: "Subscriptions" },
+  { id: "payroll", label: "Payroll" },
+  { id: "api", label: "API", soon: true },
+];
 
 export default function Dashboard() {
   const { address } = useWallet();
-  const [data, setData] = useState<Data | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [showAllPlans, setShowAllPlans] = useState(false);
-  const [showAllPayments, setShowAllPayments] = useState(false);
+  const [section, setSection] = useState<Section>("overview");
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  useEffect(() => {
-    if (!address) {
-      setData(null);
-      return;
-    }
-    setLoading(true);
-    fetch(`/api/dashboard?wallet=${address}`)
-      .then((r) => r.json())
-      .then(setData)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [address]);
+  const selectSection = (id: Section) => {
+    setSection(id);
+    setMobileOpen(false);
+  };
 
-  const activeSubs =
-    data?.plans.reduce((n, p) => n + p.subscribers.filter((s) => s.status === "active").length, 0) ?? 0;
+  // Reusable nav list. `collapsed` = icons only (tablet rail).
+  const NavList = ({ collapsed }: { collapsed?: boolean }) => (
+    <nav className="flex flex-col gap-1">
+      {NAV.map((n) => (
+        <button
+          key={n.id}
+          onClick={() => !n.soon && selectSection(n.id)}
+          disabled={n.soon}
+          title={n.label}
+          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+            collapsed ? "justify-center" : ""
+          } ${
+            section === n.id
+              ? "bg-[var(--primary)] text-white"
+              : n.soon
+              ? "text-[var(--muted)] opacity-50 cursor-not-allowed"
+              : "text-[var(--muted)] hover:bg-[var(--card)] hover:text-[var(--foreground)]"
+          }`}
+        >
+          <span className="flex-none">{icons[n.id]}</span>
+          {!collapsed && (
+            <span className="whitespace-nowrap">
+              {n.label}
+              {n.soon && <span className="ml-1.5 text-[10px]">soon</span>}
+            </span>
+          )}
+        </button>
+      ))}
+    </nav>
+  );
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <Navbar />
-      <div className="mx-auto max-w-5xl px-8 py-12">
-        <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
+      
+      <Navbar onMenuClick={() => setMobileOpen(true)} />
 
-        {!address && (
-          <p className="mt-6 text-[var(--muted)]">Connect your wallet to view your plans and revenue.</p>
-        )}
-        {address && loading && <p className="mt-6 text-[var(--muted)]">Loading…</p>}
-        {address && data && !data.merchant && (
-          <p className="mt-6 text-[var(--muted)]">
-            No plans found for this wallet yet. <a href="/create" className="underline">Create one →</a>
-          </p>
-        )}
-
-        {address && data?.merchant && (
-          <>
-            {/* Stats */}
-            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <Stat label="Your revenue" value={usd(data.totalRevenue)} />
-              <Stat label="Active subscribers" value={String(activeSubs)} />
-              <Stat label="Plans" value={String(data.plans.length)} />
-            </div>
-
-            {/* Plans */}
-            <h2 className="mt-12 text-xl font-semibold tracking-tight">Plans</h2>
-            <div className="mt-4 space-y-4">
-              {(showAllPlans ? data.plans : data.plans.slice(0, 4)).map((p) => {
-                const period = periodLabel(p.period_seconds);
-                
-                const link = `${typeof window !== "undefined" ? window.location.origin : ""}/subscribe/${p.plan_pda}`;
-                return (
-                  <div key={p.id} className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-medium">{p.name}</p>
-                        <p className="mt-1 text-sm text-[var(--muted)]">
-                          Customer pays {usd(p.amount)} / {period}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(link);
-                          setCopiedId(p.id);
-                          setTimeout(() => setCopiedId((c) => (c === p.id ? null : c)), 1500);
-                        }}
-                        className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs transition hover:border-[var(--primary)]"
-                      >
-                        {copiedId === p.id ? "Copied!" : "Copy link"}
-                      </button>
-                    </div>
-
-                    {p.subscribers.length > 0 ? (
-                      <div className="mt-4 border-t border-[var(--border)] pt-4">
-                        <p className="text-xs uppercase tracking-wide text-[var(--muted)]">
-                          {p.subscribers.length} subscriber{p.subscribers.length > 1 ? "s" : ""}
-                        </p>
-                        <div className="mt-2 space-y-1">
-                          {p.subscribers.slice(0, 3).map((s) => (
-                            <div key={s.id} className="flex items-center justify-between text-sm">
-                              <span className="font-mono text-[var(--muted)]">{short(s.subscriber_wallet)}</span>
-                              <span className="text-[var(--muted)]">
-                                next: {fmtDate(s.next_collection_at)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                        {p.subscribers.length > 3 && (
-                         <a
-                            href={`/plans/${p.plan_pda}`}
-                            className="mt-2 inline-block text-sm text-[var(--primary)] hover:underline"
-                          >
-                            View all {p.subscribers.length} subscribers →
-                          </a>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="mt-4 border-t border-[var(--border)] pt-4 text-sm text-[var(--muted)]">
-                        No subscribers yet.
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            {data.plans.length > 4 && (
-              <a href="/plans" className="mt-4 inline-block text-sm text-[var(--primary)] hover:underline">
-                View all {data.plans.length} plans →
-              </a>
-            )}
-
-            {/* Recent payments */}
-            <h2 className="mt-12 text-xl font-semibold tracking-tight">Recent payments</h2>
-            <div className="mt-4 overflow-hidden rounded-xl border border-[var(--border)]">
-              {data.recentPayments.length === 0 && (
-                <p className="p-6 text-sm text-[var(--muted)]">No payments yet.</p>
-              )}
-              {(showAllPayments ? data.recentPayments : data.recentPayments.slice(0, 10)).map((pay, i) => (
-                <div
-                  key={pay.id}
-                  className={`flex items-center justify-between px-6 py-3 text-sm ${
-                    i > 0 ? "border-t border-[var(--border)]" : ""
-                  }`}
-                >
-                  <span className="text-[var(--muted)]">{fmtDate(pay.attempted_at)}</span>
-                  <span>{usd(pay.amount)}</span>
-                  <span
-                    className={
-                      pay.status === "success" ? "text-green-600" : "text-[var(--muted)]"
-                    }
-                  >
-                    {pay.status}
-                  </span>
-                  {pay.tx_signature ? (
-                    <a
-                      href={`https://explorer.solana.com/tx/${pay.tx_signature}?cluster=devnet`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[var(--primary)] hover:underline"
-                    >
-                      view
-                    </a>
-                  ) : (
-                    <span className="text-[var(--muted)]">—</span>
-                  )}
-                </div>
-              ))}
-            </div>
-            {data.recentPayments.length > 10 && (
-              <button
-                onClick={() => setShowAllPayments((v) => !v)}
-                className="mt-4 text-sm text-[var(--primary)] hover:underline"
-              >
-                {showAllPayments ? "Show fewer payments" : "View more payments"}
+      {/* Mobile overlay menu */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
+          <div className="absolute right-0 top-0 h-full w-72 bg-[var(--background)] p-6 shadow-xl">
+            <div className="mb-6 flex items-center justify-between">
+              <span className="font-semibold">Menu</span>
+              <button onClick={() => setMobileOpen(false)} aria-label="Close menu" className="rounded-lg border border-[var(--border)] p-2">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </button>
-            )}
-          </>
-        )}
+            </div>
+            <NavList />
+          </div>
+        </div>
+      )}
+
+      <div className="mx-auto max-w-6xl px-6 py-8">
+        <div className="flex gap-8">
+          {/* Desktop: full sidebar (lg+). Tablet: icon rail (md). Mobile: hidden. */}
+          <aside className="hidden md:block md:border-r md:border-[var(--border)] md:pr-4">
+            {/* full labels on lg+, icons-only on md */}
+            <div className="hidden lg:block w-44"><NavList /></div>
+            <div className="block lg:hidden"><NavList collapsed /></div>
+          </aside>
+
+          {/* Main panel */}
+          <section className="min-w-0 flex-1">
+            {!address && <p className="text-[var(--muted)]">Connect your wallet to view your dashboard.</p>}
+            {address && section === "overview" && <OverviewPanel />}
+            {address && section === "subscriptions" && <SubscriptionsList />}
+            {address && section === "payroll" && <PayrollList />}
+          </section>
+        </div>
       </div>
     </main>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function OverviewPanel() {
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
-      <p className="text-sm text-[var(--muted)]">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tracking-tight">{value}</p>
+    <div>
+      <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
+      <p className="mt-2 text-[var(--muted)]">Your Paylo activity at a glance.</p>
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <a href="/create" className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 transition hover:border-[var(--primary)]">
+          <p className="font-medium">Subscriptions</p>
+          <p className="mt-1 text-sm text-[var(--muted)]">Create plans and get paid on repeat.</p>
+        </a>
+        <a href="/payroll" className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 transition hover:border-[var(--primary)]">
+          <p className="font-medium">Payroll</p>
+          <p className="mt-1 text-sm text-[var(--muted)]">Pay your team on a schedule.</p>
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function Placeholder({ title }: { title: string }) {
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+      <p className="mt-4 text-[var(--muted)]">Coming into this panel next…</p>
     </div>
   );
 }
