@@ -2,7 +2,9 @@ packages:
   - 'apps/*'
   - 'packages/*'
 allowBuilds:
+  bufferutil: set this to true or false
   esbuild: true
   sharp: true
   unrs-resolver: true
+  utf-8-validate: set this to true or false
   workerd: true
