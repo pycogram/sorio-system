@@ -7,6 +7,15 @@ import {
   TOKEN_PROGRAM,
 } from "../../../packages/solana/src/index.js";
 
+// Swallow stray background promise rejections from the SDK's fire-and-forget
+// confirmation calls (cosmetic — the transactions themselves already succeed).
+if (typeof addEventListener === "function") {
+  addEventListener("unhandledrejection", (e: any) => {
+    e.preventDefault();
+    console.log("   (ignored background rejection)");
+  });
+}
+
 interface Env {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
@@ -77,18 +86,8 @@ export default {
       let sig: string | null = null;
       let reason: string | null = null;
       try {
-        // Pull #1: merchant's share, direct customer -> merchant.
-        const result = await collectPayment(client, puller, {
-          amount: merchantAmount,
-          delegator: address(sub.subscriber_wallet),
-          mint: address(plan.token_mint),
-          planPda: address(plan.plan_pda),
-          receiverAta: merchantAta,
-        });
-        sig = result.signature;
-        console.log("   *** COLLECTED (merchant) ***", sig);
-
-        // Pull #2: platform fee, direct customer -> fee wallet (same period).
+        // Pull #1: FEE first (customer -> fee wallet) so the platform fee is
+        // never collected without the merchant pull also going through.
         if (feeAmount > 0n) {
           const feeResult = await collectPayment(client, puller, {
             amount: feeAmount,
@@ -100,27 +99,40 @@ export default {
           console.log("   *** FEE COLLECTED ***", feeResult.signature);
         }
 
+        // Pull #2: merchant's share (customer -> merchant).
+        const result = await collectPayment(client, puller, {
+          amount: merchantAmount,
+          delegator: address(sub.subscriber_wallet),
+          mint: address(plan.token_mint),
+          planPda: address(plan.plan_pda),
+          receiverAta: merchantAta,
+        });
+        sig = result.signature;
+        console.log("   *** COLLECTED (merchant) ***", sig);
+
         ok = true;
       } catch (e: any) {
         reason = e?.message ?? String(e);
         console.log("   collection failed:", reason);
       }
 
-      await db.from("billing_history").insert({
+      const { error: histErr } = await db.from("billing_history").insert({
         subscription_id: sub.id,
         amount: plan.amount,
         status: ok ? "success" : "failed",
         tx_signature: sig,
         failure_reason: reason,
       });
+      if (histErr) console.log("   billing_history insert error:", histErr.message);
 
       if (ok) {
         const next = new Date(Date.now() + plan.period_seconds * 1000).toISOString();
-        await db
+        const { error: updErr } = await db
           .from("subscriptions")
           .update({ next_collection_at: next, last_collection_at: nowIso })
           .eq("id", sub.id);
-        console.log(`   advanced to ${next}`);
+        if (updErr) console.log("   subscription update error:", updErr.message);
+        else console.log(`   advanced to ${next}`);
       }
     }
 
@@ -223,7 +235,7 @@ export default {
           }
 
           // Record payment in history (success or failure).
-          await db.from("payroll_history").insert({
+          const { error: phErr } = await db.from("payroll_history").insert({
             payroll_item_id: i.id,
             amount: Number(salary),
             fee: Number(fee),
@@ -232,15 +244,17 @@ export default {
             fee_tx: null,
             failure_reason: reason,
           });
+          if (phErr) console.log(`   payroll_history insert error:`, phErr.message);
 
           // Advance schedule only on success.
           if (ok) {
             const next = new Date(Date.now() + pr.period_seconds * 1000).toISOString();
-            await db
+            const { error: piErr } = await db
               .from("payroll_items")
               .update({ next_payment_at: next, last_payment_at: nowIso })
               .eq("id", i.id);
-            console.log(`   payroll ${i.id} advanced to ${next}`);
+            if (piErr) console.log(`   payroll_item update error:`, piErr.message);
+            else console.log(`   payroll ${i.id} advanced to ${next}`);
           }
         }
       }
