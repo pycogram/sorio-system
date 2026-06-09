@@ -1,143 +1,210 @@
 "use client";
 
-import { useState } from "react";
-import { Navbar } from "../navbar";
+import useSWR from "swr";
+import { AppShell } from "../app-shell";
 import { useWallet } from "../providers";
-import { PayrollList } from "../payroll/payroll-list";
-import { SubscriptionsList } from "./subscriptions-list";
+import { fetcher } from "../lib/fetcher";
 
-type Section = "overview" | "subscriptions" | "payroll" | "api";
-
-const icons: Record<Section, React.ReactNode> = {
-  overview: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
-  ),
-  subscriptions: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6" /><path d="M1 20v-6h6" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>
-  ),
-  payroll: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-  ),
-  api: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
-  ),
-};
-
-const NAV: { id: Section; label: string; soon?: boolean }[] = [
-  { id: "overview", label: "Overview" },
-  { id: "subscriptions", label: "Subscriptions" },
-  { id: "payroll", label: "Payroll" },
-  { id: "api", label: "API", soon: true },
-];
+const usd = (n: number) => `$${(n / 1_000_000).toFixed(2)}`;
+const fmtDate = (d: string | null) =>
+  d ? new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—";
 
 export default function Dashboard() {
   const { address } = useWallet();
-  const [section, setSection] = useState<Section>("overview");
-  const [mobileOpen, setMobileOpen] = useState(false);
 
-  const selectSection = (id: Section) => {
-    setSection(id);
-    setMobileOpen(false);
-  };
-
-  // Reusable nav list. `collapsed` = icons only (tablet rail).
-  const NavList = ({ collapsed }: { collapsed?: boolean }) => (
-    <nav className="flex flex-col gap-1">
-      {NAV.map((n) => (
-        <button
-          key={n.id}
-          onClick={() => !n.soon && selectSection(n.id)}
-          disabled={n.soon}
-          title={n.label}
-          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
-            collapsed ? "justify-center" : ""
-          } ${
-            section === n.id
-              ? "bg-[var(--primary)] text-white"
-              : n.soon
-              ? "text-[var(--muted)] opacity-50 cursor-not-allowed"
-              : "text-[var(--muted)] hover:bg-[var(--card)] hover:text-[var(--foreground)]"
-          }`}
-        >
-          <span className="flex-none">{icons[n.id]}</span>
-          {!collapsed && (
-            <span className="whitespace-nowrap">
-              {n.label}
-              {n.soon && <span className="ml-1.5 text-[10px]">soon</span>}
-            </span>
-          )}
-        </button>
-      ))}
-    </nav>
+  const { data: scribe, isLoading: l1 } = useSWR(
+    address ? `/api/dashboard?wallet=${address}` : null, fetcher
+  );
+  const { data: prData, isLoading: l2 } = useSWR(
+    address ? `/api/payroll/list?wallet=${address}` : null, fetcher
+  );
+  const { data: empData, isLoading: l3 } = useSWR(
+    address ? `/api/payroll/employee?wallet=${address}` : null, fetcher
   );
 
+  const payrolls: any[] = prData?.payrolls ?? [];
+  const received: any[] = empData?.items ?? [];
+  const loading = l1 || l2 || l3;
+
+  // ---- derived stats ----
+  const revenue = scribe?.totalRevenue ?? 0;
+  const activeSubscribers =
+    scribe?.plans?.reduce(
+      (n: number, p: any) => n + p.subscribers.filter((s: any) => s.status === "active").length,
+      0
+    ) ?? 0;
+  const mySubsActive =
+    scribe?.mySubscriptions?.filter((s: any) => s.status === "active").length ?? 0;
+
+  const paidOut = payrolls.reduce(
+    (sum, p) =>
+      sum +
+      p.payroll_items.reduce(
+        (s: number, i: any) =>
+          s +
+          (i.payroll_history ?? [])
+            .filter((h: any) => h.status === "success")
+            .reduce((hs: number, h: any) => hs + h.amount, 0),
+        0
+      ),
+    0
+  );
+  const totalReceived = received.reduce(
+    (sum, i) =>
+      sum +
+      (i.payroll_history ?? [])
+        .filter((h: any) => h.status === "success")
+        .reduce((s: number, h: any) => s + h.amount, 0),
+    0
+  );
+  const activePaychecks = received.filter((i) => i.status === "active").length;
+
+  // recent activity: merge Scribe payments + payroll history, newest first
+  const activity: { when: string; label: string; amount: number; dir: "in" | "out" }[] = [];
+  (scribe?.recentPayments ?? []).forEach((p: any) =>
+    activity.push({ when: p.attempted_at, label: "Subscription payment", amount: p.amount, dir: "in" })
+  );
+  payrolls.forEach((p) =>
+    p.payroll_items.forEach((i: any) =>
+      (i.payroll_history ?? [])
+        .filter((h: any) => h.status === "success")
+        .forEach((h: any) => activity.push({ when: h.paid_at, label: `Paid ${p.name}`, amount: h.amount, dir: "out" }))
+    )
+  );
+  received.forEach((i) =>
+    (i.payroll_history ?? [])
+      .filter((h: any) => h.status === "success")
+      .forEach((h: any) =>
+        activity.push({ when: h.paid_at, label: `Paycheck from ${i.payrolls?.name ?? "payroll"}`, amount: h.amount, dir: "in" })
+      )
+  );
+  activity.sort((a, b) => (a.when < b.when ? 1 : -1));
+  const recent = activity.slice(0, 6);
+
   return (
-    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      
-      <Navbar onMenuClick={() => setMobileOpen(true)} />
+    <AppShell>
+      <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
+      <p className="mt-2 text-[var(--muted)]">Your Paylo activity at a glance.</p>
 
-      {/* Mobile overlay menu */}
-      {mobileOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
-          <div className="absolute right-0 top-0 h-full w-72 bg-[var(--background)] p-6 shadow-xl">
-            <div className="mb-6 flex items-center justify-between">
-              <span className="font-semibold">Menu</span>
-              <button onClick={() => setMobileOpen(false)} aria-label="Close menu" className="rounded-lg border border-[var(--border)] p-2">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-              </button>
-            </div>
-            <NavList />
+      {!address && <p className="mt-8 text-[var(--muted)]">Connect your wallet to get started.</p>}
+      {address && loading && <p className="mt-8 text-[var(--muted)]">Loading…</p>}
+
+      {address && !loading && (
+        <>
+          {/* Stats */}
+          <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <Stat label="Revenue (subscriptions)" value={usd(revenue)} accent />
+            <Stat label="Paid out (payroll)" value={usd(paidOut)} />
+            <Stat label="Active subscribers" value={String(activeSubscribers)} />
+            <Stat label="Received (paychecks)" value={usd(totalReceived)} accent />
           </div>
-        </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <MiniStat label="Your subscriptions" value={String(mySubsActive)} />
+            <MiniStat label="Plans" value={String(scribe?.plans?.length ?? 0)} />
+            <MiniStat label="Payrolls" value={String(payrolls.length)} />
+            <MiniStat label="Active paychecks" value={String(activePaychecks)} />
+          </div>
+
+          {/* Recent activity + quick actions */}
+          <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-3">
+            {/* activity */}
+            <div className="lg:col-span-2">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold tracking-tight">Recent activity</h2>
+                {recent.length > 0 && (
+                  <a href="/history" className="text-sm text-[var(--primary)] hover:underline">
+                    View all →
+                  </a>
+                )}
+              </div>
+              {recent.length === 0 ? (
+                <div className="mt-4 flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--border)] bg-[var(--card)] px-6 py-16 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full" style={{ background: "color-mix(in srgb, var(--primary) 12%, transparent)" }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" />
+                    </svg>
+                  </div>
+                  <p className="mt-4 font-medium">No activity yet</p>
+                  <p className="mt-1 max-w-xs text-sm text-[var(--muted)]">
+                    Once you create a plan or run a payroll, your payments in and out will show up here.
+                  </p>
+                  <a href="/create" className="mt-4 text-sm font-medium text-[var(--primary)] transition hover:underline">
+                    Create your first plan →
+                  </a>
+                </div>
+              ) : (
+                <div className="mt-4 overflow-hidden rounded-xl border border-[var(--border)]">
+                  {recent.map((a, i) => (
+                    <div
+                      key={i}
+                      className={`flex items-center justify-between px-5 py-3 text-sm ${i > 0 ? "border-t border-[var(--border)]" : ""}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`flex h-7 w-7 items-center justify-center rounded-full text-xs ${
+                            a.dir === "in" ? "bg-[var(--accent)]/15 text-[var(--accent)]" : "bg-[var(--primary)]/15 text-[var(--primary)]"
+                          }`}
+                        >
+                          {a.dir === "in" ? "↓" : "↑"}
+                        </span>
+                        <span>{a.label}</span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className={a.dir === "in" ? "text-[var(--accent)]" : ""}>
+                          {a.dir === "in" ? "+" : "−"}{usd(a.amount)}
+                        </span>
+                        <span className="w-14 text-right text-xs text-[var(--muted)]">{fmtDate(a.when)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* quick actions */}
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight">Quick actions</h2>
+              <div className="mt-4 space-y-3">
+                <a href="/create" className="block rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 transition hover:border-[var(--primary)]">
+                  <p className="font-medium">Create a plan</p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">Start accepting subscriptions.</p>
+                </a>
+                <a href="/payroll/new" className="block rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 transition hover:border-[var(--primary)]">
+                  <p className="font-medium">New payroll</p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">Pay your team on a schedule.</p>
+                </a>
+                <a href="/plans" className="block rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 transition hover:border-[var(--primary)]">
+                  <p className="font-medium">Plans →</p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">Manage plans & subscribers.</p>
+                </a>
+                <a href="/payroll" className="block rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 transition hover:border-[var(--primary)]">
+                  <p className="font-medium">Payroll →</p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">Manage payrolls & paychecks.</p>
+                </a>
+              </div>
+            </div>
+          </div>
+        </>
       )}
-
-      <div className="mx-auto max-w-6xl px-6 py-8">
-        <div className="flex gap-8">
-          {/* Desktop: full sidebar (lg+). Tablet: icon rail (md). Mobile: hidden. */}
-          <aside className="hidden md:block md:border-r md:border-[var(--border)] md:pr-4">
-            {/* full labels on lg+, icons-only on md */}
-            <div className="hidden lg:block w-44"><NavList /></div>
-            <div className="block lg:hidden"><NavList collapsed /></div>
-          </aside>
-
-          {/* Main panel */}
-          <section className="min-w-0 flex-1">
-            {!address && <p className="text-[var(--muted)]">Connect your wallet to view your dashboard.</p>}
-            {address && section === "overview" && <OverviewPanel />}
-            {address && section === "subscriptions" && <SubscriptionsList />}
-            {address && section === "payroll" && <PayrollList />}
-          </section>
-        </div>
-      </div>
-    </main>
+    </AppShell>
   );
 }
 
-function OverviewPanel() {
+function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <div>
-      <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
-      <p className="mt-2 text-[var(--muted)]">Your Paylo activity at a glance.</p>
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <a href="/create" className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 transition hover:border-[var(--primary)]">
-          <p className="font-medium">Subscriptions</p>
-          <p className="mt-1 text-sm text-[var(--muted)]">Create plans and get paid on repeat.</p>
-        </a>
-        <a href="/payroll" className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 transition hover:border-[var(--primary)]">
-          <p className="font-medium">Payroll</p>
-          <p className="mt-1 text-sm text-[var(--muted)]">Pay your team on a schedule.</p>
-        </a>
-      </div>
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+      <p className="text-xs text-[var(--muted)]">{label}</p>
+      <p className={`mt-1 text-2xl font-semibold tracking-tight ${accent ? "text-[var(--accent)]" : ""}`}>{value}</p>
     </div>
   );
 }
 
-function Placeholder({ title }: { title: string }) {
+function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-      <p className="mt-4 text-[var(--muted)]">Coming into this panel next…</p>
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-5 py-3">
+      <p className="text-lg font-semibold">{value}</p>
+      <p className="text-xs text-[var(--muted)]">{label}</p>
     </div>
   );
 }
