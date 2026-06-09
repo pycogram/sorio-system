@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
-import { Navbar } from "../../navbar";
+import { AppShell } from "../../app-shell";
 import { useWallet } from "../../providers";
 
 type Subscriber = {
@@ -49,9 +49,7 @@ export default function PlanDetail({ params }: { params: Promise<{ planPda: stri
   const activeCount = plan?.subscribers.filter((s) => s.status === "active").length ?? 0;
 
   return (
-    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <Navbar />
-      <div className="mx-auto max-w-4xl px-8 py-12">
+    <AppShell>
         <a href="/plans" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)]">← All plans</a>
 
         {!address && <p className="mt-6 text-[var(--muted)]">Connect your wallet to view this plan.</p>}
@@ -101,7 +99,6 @@ export default function PlanDetail({ params }: { params: Promise<{ planPda: stri
             )}
           </>
         )}
-      </div>
-    </main>
+      </AppShell>
   );
 }
