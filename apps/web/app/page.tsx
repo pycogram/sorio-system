@@ -162,22 +162,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Gallery */}
-      <section className="relative z-10 border-t border-[var(--border)]">
-        <div className="mx-auto max-w-6xl px-8 py-24">
-          <h2 className="text-center text-4xl font-semibold tracking-tight">See Paylo in action</h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-[var(--muted)]">
-            From creating a plan to autonomous agent payments.
-          </p>
-          <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-2">
-            <GalleryItem src="/image1.png" caption="Create a plan and share a link" />
-            <GalleryItem src="/image2.png" caption="Approve once, on-chain" />
-            <GalleryItem src="/image3.png" caption="Collected automatically every cycle" />
-            <GalleryItem src="/image4.png" caption="Give an AI agent a bounded budget" />
-          </div>
-        </div>
-      </section>
-
       {/* Three products */}
       <section className="relative z-10 mx-auto max-w-6xl px-8 py-24">
         <h2 className="text-center text-4xl font-semibold tracking-tight">One engine. Three products.</h2>
@@ -186,7 +170,7 @@ export default function Home() {
         </p>
         <div className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-3">
           <ProductCard name="Paylo Scribe" tag="Live" tagLive body="Subscriptions for merchants. Create plans, share a link, get paid automatically. Customers subscribe and cancel anytime." />
-          <ProductCard name="Paylo Roll" tag="Coming soon" body="Payroll on the same rail. Pay employees and contractors on a recurring schedule, in stablecoins, on-chain." />
+          <ProductCard name="Paylo Roll" tag="Live" tagLive body="Payroll on the same rail. Pay employees and contractors on a recurring schedule, in stablecoins, on-chain." />
           <ProductCard name="Paylo API" tag="Coming soon" body="Infrastructure for builders. Integrate Paylo's recurring-payment rail directly into your own product." />
         </div>
       </section>
@@ -300,6 +284,22 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Gallery */}
+      <section className="relative z-10 border-t border-[var(--border)]">
+        <div className="mx-auto max-w-6xl px-8 py-24">
+          <h2 className="text-center text-4xl font-semibold tracking-tight">See Paylo in action</h2>
+          <p className="mx-auto mt-3 max-w-xl text-center text-[var(--muted)]">
+            From creating a plan to autonomous agent payments.
+          </p>
+          <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-2">
+            <GalleryItem src="/image1.png" caption="Create a plan and share a link" />
+            <GalleryItem src="/image2.png" caption="Approve once, on-chain" />
+            <GalleryItem src="/image3.png" caption="Collected automatically every cycle" />
+            <GalleryItem src="/image4.png" caption="Give an AI agent a bounded budget" />
+          </div>
+        </div>
+      </section>
+
       {/* Trust band */}
       <section className="relative z-10 border-t border-[var(--border)]">
         <div className="mx-auto max-w-6xl px-8 py-20">
@@ -377,8 +377,8 @@ export default function Home() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Products</p>
               <ul className="mt-4 space-y-3 text-sm">
-                <li><a href="/create" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Paylo Scribe</a></li>
-                <li><span className="text-[var(--muted)] opacity-60">Paylo Roll</span> <span className="ml-1 text-[10px] text-[var(--muted)]">soon</span></li>
+                <li><a href="/plans" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Paylo Scribe</a></li>
+                <li><a href="/payroll" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Paylo Roll</a></li>
                 <li><span className="text-[var(--muted)] opacity-60">Paylo API</span> <span className="ml-1 text-[10px] text-[var(--muted)]">soon</span></li>
               </ul>
             </div>
