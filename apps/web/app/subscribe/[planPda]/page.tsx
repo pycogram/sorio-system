@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { useEffect, useState, use } from "react";
 import { Navbar } from "../../navbar";
@@ -63,7 +64,7 @@ export default function SubscribePage({
       <Navbar />
 
       <div className="mx-auto max-w-5xl px-8 pt-8">
-        <a href="/dashboard" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)]">← Dashboard</a>
+        <Link href="/dashboard" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)]">← Dashboard</Link>
       </div>
 
       <div className="mx-auto grid max-w-5xl grid-cols-1 gap-12 px-8 py-16 md:grid-cols-2 md:py-24">

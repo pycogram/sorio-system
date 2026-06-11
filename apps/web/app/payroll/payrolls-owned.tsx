@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { useEffect, useState } from "react";
 import { useWallet } from "../providers";
@@ -51,8 +52,10 @@ export function PayrollsOwned() {
       await runApproveEmployee({ itemId });
       await refresh();
     } catch (e: any) {
+      const msg = e?.message ?? "";
+      if (e?.code === 4001 || /reject/i.test(msg) || msg === "USER_CANCELLED") return;
       console.error("approve failed:", e);
-      alert("Approve failed: " + (e?.message ?? e));
+      alert("Approve failed: " + msg);
     } finally {
       setApproving(null);
     }
@@ -84,9 +87,9 @@ export function PayrollsOwned() {
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Payroll</h1>
-        <a href="/payroll/new" className="rounded-lg bg-[var(--btn)] px-4 py-2 text-sm font-medium text-[var(--btn-text)]">
+        <Link href="/payroll/new" className="rounded-lg bg-[var(--btn)] px-4 py-2 text-sm font-medium text-[var(--btn-text)]">
           + New payroll
-        </a>
+        </Link>
       </div>
       <p className="mt-1 text-sm text-[var(--muted)]">Payrolls paying out from your wallet.</p>
 
