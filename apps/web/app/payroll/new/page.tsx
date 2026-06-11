@@ -163,8 +163,8 @@ export default function NewPayrollPage() {
                   <p className="mt-2 text-sm text-[var(--muted)]">
                     Next, approve each employee on-chain to start paying them.
                   </p>
-                  <Link href="/dashboard" className="mt-5 inline-block w-full rounded-lg bg-[var(--btn)] px-4 py-3 text-sm font-medium text-[var(--btn-text)]">
-                    Go to dashboard →
+                  <Link href="/payroll" className="mt-5 inline-block w-full rounded-lg bg-[var(--btn)] px-4 py-3 text-sm font-medium text-[var(--btn-text)]">
+                    Go to Payroll →
                   </Link>
                   <button
                     onClick={() => setDone(false)}
