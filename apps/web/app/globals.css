@@ -46,3 +46,12 @@ body {
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+
+/* Hide scrollbars everywhere (content still scrolls) */
+* {
+  scrollbar-width: none;            /* Firefox */
+  -ms-overflow-style: none;         /* old Edge/IE */
+}
+*::-webkit-scrollbar {
+  display: none;                    /* Chrome, Safari, Edge */
+}
