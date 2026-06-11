@@ -67,7 +67,7 @@ export default function SubscribePage({
         <Link href="/dashboard" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)]">← Dashboard</Link>
       </div>
 
-      <div className="mx-auto grid max-w-5xl grid-cols-1 gap-12 px-8 py-16 md:grid-cols-2 md:py-24">
+      <div className="mx-auto grid max-w-5xl grid-cols-1 gap-12 px-8 py-16 md:grid-cols-2 md:py-12 lg:py-4">
         {/* LEFT — context & trust */}
         <div className="flex flex-col justify-center">
           {loading && <p className="text-[var(--muted)]">Loading…</p>}
