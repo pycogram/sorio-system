@@ -6,9 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "cf-typegen": "wrangler types"
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "^1.19.11",
     "@solana-program/token": "^0.13.0",
     "@solana/kit": "^6.9.0",
     "@solana/kit-plugin-rpc": "^0.11.1",
@@ -17,6 +21,7 @@
     "@solana/wallet-account-signer": "^6.9.0",
     "@solana/web3.js": "^1.98.4",
     "@supabase/supabase-js": "^2.107.0",
+    "@paylo/solana": "workspace:*",
     "@wallet-standard/app": "^1.1.1",
     "@wallet-standard/base": "^1.1.1",
     "bs58": "^6.0.0",

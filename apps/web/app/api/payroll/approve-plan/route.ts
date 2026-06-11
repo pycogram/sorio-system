@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { address } from "@solana/kit";
 import { createClient as createDb } from "@supabase/supabase-js";
-import { makeClient, createPlan, ensureMerchantAta } from "../../../../../../packages/solana/src/index";
+import { makeClient, createPlan, ensureMerchantAta } from "@paylo/solana";
 
 export const runtime = "nodejs";
 const USDC_MINT = address("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
