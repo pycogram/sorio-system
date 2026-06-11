@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import useSWR from "swr";
 import { AppShell } from "../app-shell";
@@ -113,9 +114,9 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold tracking-tight">Recent activity</h2>
                 {recent.length > 0 && (
-                  <a href="/history" className="text-sm text-[var(--primary)] hover:underline">
+                  <Link href="/history" className="text-sm text-[var(--primary)] hover:underline">
                     View all →
-                  </a>
+                  </Link>
                 )}
               </div>
               {recent.length === 0 ? (
@@ -129,9 +130,9 @@ export default function Dashboard() {
                   <p className="mt-1 max-w-xs text-sm text-[var(--muted)]">
                     Once you create a plan or run a payroll, your payments in and out will show up here.
                   </p>
-                  <a href="/create" className="mt-4 text-sm font-medium text-[var(--primary)] transition hover:underline">
+                  <Link href="/create" className="mt-4 text-sm font-medium text-[var(--primary)] transition hover:underline">
                     Create your first plan →
-                  </a>
+                  </Link>
                 </div>
               ) : (
                 <div className="mt-4 overflow-hidden rounded-xl border border-[var(--border)]">
@@ -166,22 +167,22 @@ export default function Dashboard() {
             <div>
               <h2 className="text-lg font-semibold tracking-tight">Quick actions</h2>
               <div className="mt-4 space-y-3">
-                <a href="/create" className="block rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 transition hover:border-[var(--primary)]">
+                <Link href="/create" className="block rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 transition hover:border-[var(--primary)]">
                   <p className="font-medium">Create a plan</p>
                   <p className="mt-1 text-xs text-[var(--muted)]">Start accepting subscriptions.</p>
-                </a>
-                <a href="/payroll/new" className="block rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 transition hover:border-[var(--primary)]">
+                </Link>
+                <Link href="/payroll/new" className="block rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 transition hover:border-[var(--primary)]">
                   <p className="font-medium">New payroll</p>
                   <p className="mt-1 text-xs text-[var(--muted)]">Pay your team on a schedule.</p>
-                </a>
-                <a href="/plans" className="block rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 transition hover:border-[var(--primary)]">
+                </Link>
+                <Link href="/plans" className="block rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 transition hover:border-[var(--primary)]">
                   <p className="font-medium">Plans →</p>
                   <p className="mt-1 text-xs text-[var(--muted)]">Manage plans & subscribers.</p>
-                </a>
-                <a href="/payroll" className="block rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 transition hover:border-[var(--primary)]">
+                </Link>
+                <Link href="/payroll" className="block rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 transition hover:border-[var(--primary)]">
                   <p className="font-medium">Payroll →</p>
                   <p className="mt-1 text-xs text-[var(--muted)]">Manage payrolls & paychecks.</p>
-                </a>
+                </Link>
               </div>
             </div>
           </div>

@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { useState } from "react";
 import { Navbar } from "../navbar";
@@ -50,7 +51,7 @@ export default function CreatePlanPage() {
       <Navbar />
 
       <div className="mx-auto max-w-5xl px-8 py-14">
-        <a href="/dashboard" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)]">← Dashboard</a>
+        <Link href="/dashboard" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)]">← Dashboard</Link>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">Create a plan</h1>
         <p className="mt-2 text-[var(--muted)]">
           Set your terms once. Share the link. Get paid automatically every cycle.

@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { useState } from "react";
 import { Navbar } from "../../navbar";
@@ -74,7 +75,7 @@ export default function NewPayrollPage() {
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <Navbar />
       <div className="mx-auto max-w-5xl px-8 py-12">
-        <a href="/dashboard" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)]">← Dashboard</a>
+        <Link href="/dashboard" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)]">← Dashboard</Link>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">New payroll</h1>
         <p className="mt-2 text-[var(--muted)]">Name it, set a schedule, and add the people you pay.</p>
 
@@ -162,9 +163,9 @@ export default function NewPayrollPage() {
                   <p className="mt-2 text-sm text-[var(--muted)]">
                     Next, approve each employee on-chain to start paying them.
                   </p>
-                  <a href="/dashboard" className="mt-5 inline-block w-full rounded-lg bg-[var(--btn)] px-4 py-3 text-sm font-medium text-[var(--btn-text)]">
+                  <Link href="/dashboard" className="mt-5 inline-block w-full rounded-lg bg-[var(--btn)] px-4 py-3 text-sm font-medium text-[var(--btn-text)]">
                     Go to dashboard →
-                  </a>
+                  </Link>
                   <button
                     onClick={() => setDone(false)}
                     className="mt-3 text-xs text-[var(--muted)] hover:text-[var(--foreground)]"

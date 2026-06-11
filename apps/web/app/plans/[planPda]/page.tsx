@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { useEffect, useState, use } from "react";
 import { AppShell } from "../../app-shell";
@@ -50,7 +51,7 @@ export default function PlanDetail({ params }: { params: Promise<{ planPda: stri
 
   return (
     <AppShell>
-        <a href="/plans" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)]">← All plans</a>
+        <Link href="/plans" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)]">← All plans</Link>
 
         {!address && <p className="mt-6 text-[var(--muted)]">Connect your wallet to view this plan.</p>}
         {address && loading && <p className="mt-6 text-[var(--muted)]">Loading…</p>}
