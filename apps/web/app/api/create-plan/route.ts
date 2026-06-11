@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readFileSync } from "node:fs";
 import { address } from "@solana/kit";
 import { createClient as createDb } from "@supabase/supabase-js";
-import { makeClient, createPlan, ensureMerchantAta } from "@paylo/solana";
+import { makeClient, createPlan, ensureMerchantAta } from "../../lib/solana-engine";
 
 export const runtime = "nodejs";
 

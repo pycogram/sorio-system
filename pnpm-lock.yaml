@@ -13,9 +13,6 @@ importers:
       '@opennextjs/cloudflare':
         specifier: ^1.19.11
         version: 1.19.11(next@16.2.6(@babel/core@7.29.7)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(wrangler@3.114.17(bufferutil@4.1.0)(utf-8-validate@6.0.6))
-      '@paylo/solana':
-        specifier: workspace:*
-        version: link:../../packages/solana
       '@solana-program/token':
         specifier: ^0.13.0
         version: 0.13.0(@solana/kit@6.9.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
