@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import Image from "next/image";
 import { useWallet, useTheme } from "./providers";
 
@@ -8,11 +9,11 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const short = address ? `${address.slice(0, 4)}…${address.slice(-4)}` : null;
 
   return (
-    <nav className="flex items-center justify-between px-4 md:px-8 py-5 border-b border-[var(--border)]">
-      <a href="/dashboard" className="flex items-center gap-2">
+    <nav className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between bg-[var(--background)] px-4 md:px-8 py-5 border-b border-[var(--border)] md:static md:z-auto">
+      <Link href="/dashboard" className="flex items-center gap-2">
         <Image src="/z-paylo-logo.png" alt="Paylo" width={28} height={28} className="rounded-lg" />
         <span className="text-lg font-semibold tracking-tight">Paylo</span>
-      </a>
+      </Link>
       <div className="flex items-center gap-4">
         <button
           onClick={address ? disconnect : connect}

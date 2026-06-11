@@ -100,11 +100,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <div className="mx-auto max-w-6xl px-6 py-8">
+      <div className="mx-auto max-w-6xl px-6 py-8 pt-25 md:pt-8">
         <div className="flex gap-8">
           <aside className="hidden md:block md:border-r md:border-[var(--border)] md:pr-4">
-            <div className="hidden lg:block w-44"><NavList /></div>
-            <div className="block lg:hidden"><NavList collapsed /></div>
+            <div className="sticky top-8">
+              <div className="hidden lg:block w-44"><NavList /></div>
+              <div className="block lg:hidden"><NavList collapsed /></div>
+            </div>
           </aside>
           <section className="min-w-0 flex-1">{children}</section>
         </div>
