@@ -24,7 +24,7 @@ import { findAssociatedTokenPda } from "@solana-program/token";
 const USDC_MINT = address("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 const TOKEN_PROGRAM = address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 const PLATFORM_OWNER = address("FPaUQV5MmDdXBTTH4pRo1C2zX7UvnC7kD1rc4VNwdFN2");
-const RPC_URL = "https://api.devnet.solana.com";
+const RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
 
 function getProvider(): any {
   const w = window as any;
@@ -47,6 +47,9 @@ function makePhantomSigner() {
           const { default: bs58 } = await import("bs58");
           out.push(bs58.decode(signature));
         } catch (err: any) {
+          if (err?.code === 4001 || /reject/i.test(err?.message ?? "")) {
+            throw new Error("USER_CANCELLED");
+          }
           console.error("send error:", err?.message, err?.code);
           throw err;
         }

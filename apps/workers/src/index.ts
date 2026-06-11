@@ -51,7 +51,7 @@ export default {
 
     // Build the puller client once (collector key from env secret).
     const pullerBytes = new Uint8Array(JSON.parse(env.PULLER_SECRET));
-    const { client, signer: puller } = await makeClient(pullerBytes);
+    const { client, signer: puller } = await makeClient(pullerBytes, env.SOLANA_RPC_URL);
 
     for (const sub of due) {
       const plan: any = sub.plans;

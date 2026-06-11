@@ -32,20 +32,22 @@ export const TOKEN_PROGRAM =
   "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address;
 
 // Build a client signed by whoever's keypair bytes you pass.
-export async function makeClient(secretBytes: Uint8Array) {
+export async function makeClient(secretBytes: Uint8Array, rpcUrl?: string) {
   const kp = await createKeyPairSignerFromBytes(secretBytes);
+  const url = rpcUrl ?? process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
   const client = await createClient()
     .use(signer(kp))
-    .use(solanaDevnetRpc())
+    .use(solanaDevnetRpc({ rpcUrl: url }))
     .use(subscriptionsProgram());
   return { client, signer: kp };
 }
 
 // Build a client that signs via an externally-provided signer (e.g. a browser wallet).
-export async function makeClientWithSigner(walletSigner: any) {
+export async function makeClientWithSigner(walletSigner: any, rpcUrl?: string) {
+  const url = rpcUrl ?? process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
   const client = await createClient()
     .use(signer(walletSigner))
-    .use(solanaDevnetRpc())
+    .use(solanaDevnetRpc({ rpcUrl: url }))
     .use(subscriptionsProgram());
   return { client, signer: walletSigner };
 }

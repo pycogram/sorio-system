@@ -23,7 +23,7 @@ import { findAssociatedTokenPda } from "@solana-program/token";
 
 const USDC_MINT = address("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 const TOKEN_PROGRAM = address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
-const RPC_URL = "https://api.devnet.solana.com";
+const RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
 
 function getProvider(): any {
   const w = window as any;
@@ -42,19 +42,13 @@ function makePhantomSigner() {
         const wire = new Uint8Array(txEncoder.encode(tx));
         const vtx = VersionedTransaction.deserialize(wire);
         try {
-          // Simulate first to capture the real program error/logs.
-          const rpc = createSolanaRpc(RPC_URL);
-          const wireB64 = Buffer.from(wire).toString("base64");
-          const sim = await rpc
-            .simulateTransaction(wireB64 as any, { encoding: "base64", sigVerify: false, replaceRecentBlockhash: true })
-            .send();
-          console.log("SIMULATION err:", sim?.value?.err);
-          console.log("SIMULATION logs:", sim?.value?.logs);
-
           const { signature } = await provider.signAndSendTransaction(vtx);
           const { default: bs58 } = await import("bs58");
           out.push(bs58.decode(signature));
         } catch (err: any) {
+          if (err?.code === 4001 || /reject/i.test(err?.message ?? "")) {
+            throw new Error("USER_CANCELLED");
+          }
           console.error("send error:", err?.message, err?.code);
           throw err;
         }
