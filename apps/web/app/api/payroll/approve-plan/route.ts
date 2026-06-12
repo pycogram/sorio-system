@@ -4,12 +4,14 @@ import { createClient as createDb } from "@supabase/supabase-js";
 import { makeClient, createPlan, ensureMerchantAta } from "../../../lib/solana-engine";
 
 export const runtime = "nodejs";
+
 const USDC_MINT = address("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 
 export async function POST(req: NextRequest) {
   try {
-    const { itemId } = await req.json();
+    const { itemId, wallet } = await req.json();
     if (!itemId) return NextResponse.json({ error: "Missing itemId" }, { status: 400 });
+    if (!wallet) return NextResponse.json({ error: "wallet required" }, { status: 400 });
 
     const db = createDb(
       process.env.SUPABASE_URL!,
@@ -17,14 +19,20 @@ export async function POST(req: NextRequest) {
       { auth: { persistSession: false } }
     );
 
-    // Load the payroll_item + its payroll (for the schedule).
+    // Load the payroll_item + its payroll (for the schedule + owner check).
     const { data: item, error: iErr } = await db
       .from("payroll_items")
-      .select("id, employee_wallet, amount, status, plan_pda, payrolls(period_seconds)")
+      .select("id, employee_wallet, amount, status, plan_pda, payrolls(period_seconds, employer_wallet)")
       .eq("id", itemId)
       .single();
     if (iErr) throw iErr;
     if (!item) return NextResponse.json({ error: "Item not found" }, { status: 404 });
+
+    // Ownership check: the item's payroll must belong to this employer wallet.
+    const ownerWallet = (item.payrolls as any)?.employer_wallet ?? null;
+    if (ownerWallet !== wallet) {
+      return NextResponse.json({ error: "not authorized" }, { status: 403 });
+    }
 
     // If a plan already exists for this item, reuse it (idempotent).
     if (item.plan_pda) {
@@ -52,7 +60,6 @@ export async function POST(req: NextRequest) {
     const periodSeconds = (item.payrolls as any)?.period_seconds ?? 2592000;
     const periodHours = Math.max(1, Math.round(periodSeconds / 3600));
     const planId = BigInt(Date.now());
-
     const { planPda, planBump } = await createPlan(client, platform, {
       planId,
       mint: USDC_MINT,

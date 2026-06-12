@@ -81,18 +81,18 @@ async function waitForConfirm(rpc: any, sigStr: string) {
 }
 
 export async function runApproveEmployee(opts: { itemId: string }) {
+  const signer = makePhantomSigner();
+  const rpc = createSolanaRpc(RPC_URL);
+  const employerAddr = signer.address;
+
   // 1. Create (or fetch) the employee's on-chain plan, server-side.
   const planRes = await fetch("/api/payroll/approve-plan", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ itemId: opts.itemId }),
+    body: JSON.stringify({ itemId: opts.itemId, wallet: employerAddr }),
   });
   const planData = await planRes.json();
   if (!planRes.ok) throw new Error(planData.error ?? "Plan creation failed");
-
-  const signer = makePhantomSigner();
-  const rpc = createSolanaRpc(RPC_URL);
-  const employerAddr = signer.address;
   const planPda = address(planData.planPda);
 
   // 2. Init the employer's subscription authority (one-time per employer+mint).
