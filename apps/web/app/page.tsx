@@ -37,7 +37,6 @@ export default function Home() {
         <svg width="520" height="520" viewBox="0 0 520 520" fill="none">
           {Array.from({ length: 7 }).map((_, row) =>
             Array.from({ length: 7 }).map((_, col) => {
-              // skip some cells to create the woven gap pattern
               if ((row + col) % 2 === 1) return null;
               return (
                 <rect
@@ -97,11 +96,11 @@ export default function Home() {
               Live on Solana devnet
             </div>
             <h1 className="mt-6 text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
-              Get paid<br />on <span className="text-[var(--primary)]">repeat.</span>
+              Approve once.<br />Paid on <span className="text-[var(--primary)]">repeat.</span>
             </h1>
             <p className="mt-6 max-w-md text-lg text-[var(--muted)]">
-              Recurring payments and payroll in USDC. Set your terms once, share a link,
-              and collect automatically every cycle. Approve once on-chain, cancel anytime.
+              Recurring payments and payroll in USDC. Approve once on-chain, then let every
+              cycle run itself - whether you're collecting or paying. Cancel anytime.
             </p>
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <a href="/create" className="rounded-lg bg-[var(--btn)] px-6 py-3 font-medium text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)]">
@@ -172,6 +171,42 @@ export default function Home() {
           <ProductCard name="Paylo Scribe" tag="Live" tagLive body="Subscriptions for merchants. Create plans, share a link, get paid automatically. Customers subscribe and cancel anytime." />
           <ProductCard name="Paylo Roll" tag="Live" tagLive body="Payroll on the same rail. Pay employees and contractors on a recurring schedule, in stablecoins, on-chain." />
           <ProductCard name="Paylo API" tag="Coming soon" body="Infrastructure for builders. Integrate Paylo's recurring-payment rail directly into your own product." />
+        </div>
+      </section>
+
+      {/* Two sides, one flow */}
+      <section className="relative z-10 border-t border-[var(--border)] bg-[var(--subtle)]">
+        <div className="mx-auto max-w-6xl px-8 py-24">
+          <h2 className="text-center text-4xl font-semibold tracking-tight">Two sides, one flow.</h2>
+          <p className="mx-auto mt-3 max-w-xl text-center text-[var(--muted)]">
+            Every Paylo product connects two people: one sets the terms, the other approves once.
+            After that, payment moves on its own each cycle.
+          </p>
+
+          <div className="mt-14 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <RelationshipFlow
+              label="Subscriptions"
+              left="Merchant"
+              leftSub="Creates a plan"
+              right="Customer"
+              rightSub="Subscribes once"
+              topLabel="Shares plan link"
+              flowLabel="Pays each cycle"
+              flowDir="rightToLeft"
+              footnote="Customer approves once on-chain, then pays automatically. Cancels anytime."
+            />
+            <RelationshipFlow
+              label="Payroll"
+              left="Employer"
+              leftSub="Sets up payroll"
+              right="Employee"
+              rightSub="Approves once"
+              topLabel="Adds employee"
+              flowLabel="Paid each cycle"
+              flowDir="leftToRight"
+              footnote="Employer authorizes once on-chain, then salary pays out automatically each period."
+            />
+          </div>
         </div>
       </section>
 
@@ -425,6 +460,70 @@ function Feature({ title, body }: { title: string; body: string }) {
   );
 }
 
+function RelationshipFlow({
+  label,
+  left,
+  leftSub,
+  right,
+  rightSub,
+  topLabel,
+  flowLabel,
+  flowDir,
+  footnote,
+}: {
+  label: string;
+  left: string;
+  leftSub: string;
+  right: string;
+  rightSub: string;
+  topLabel: string;
+  flowLabel: string;
+  flowDir: "leftToRight" | "rightToLeft";
+  footnote: string;
+}) {
+  const flowRTL = flowDir === "rightToLeft";
+  return (
+    <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-7 transition hover:border-[var(--primary)] hover:shadow-xl">
+      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">{label}</p>
+
+      <svg viewBox="0 0 460 200" className="mt-5 w-full" role="img" aria-label={`${left} and ${right} payment flow`}>
+        <defs>
+          <marker id={`arr-p-${label}`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </marker>
+          <marker id={`arr-a-${label}`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </marker>
+        </defs>
+
+        {/* Left node */}
+        <rect x="10" y="70" width="150" height="64" rx="14" fill="color-mix(in srgb, var(--primary) 12%, var(--card))" stroke="var(--primary)" strokeWidth="1" />
+        <text x="85" y="96" textAnchor="middle" fill="var(--foreground)" fontSize="15" fontWeight="600">{left}</text>
+        <text x="85" y="116" textAnchor="middle" fill="var(--muted)" fontSize="12">{leftSub}</text>
+
+        {/* Right node */}
+        <rect x="300" y="70" width="150" height="64" rx="14" fill="color-mix(in srgb, var(--accent) 12%, var(--card))" stroke="var(--accent)" strokeWidth="1" />
+        <text x="375" y="96" textAnchor="middle" fill="var(--foreground)" fontSize="15" fontWeight="600">{right}</text>
+        <text x="375" y="116" textAnchor="middle" fill="var(--muted)" fontSize="12">{rightSub}</text>
+
+        {/* Top arrow: setup (left -> right) */}
+        <text x="230" y="48" textAnchor="middle" fill="var(--muted)" fontSize="12">{topLabel}</text>
+        <line x1="162" y1="84" x2="298" y2="84" stroke="var(--primary)" strokeWidth="1.5" markerEnd={`url(#arr-p-${label})`} />
+
+        {/* Bottom arrow: payment flow (direction varies) */}
+        <text x="230" y="164" textAnchor="middle" fill="var(--muted)" fontSize="12">{flowLabel}</text>
+        {flowRTL ? (
+          <line x1="298" y1="120" x2="162" y2="120" stroke="var(--accent)" strokeWidth="1.5" markerEnd={`url(#arr-a-${label})`} />
+        ) : (
+          <line x1="162" y1="120" x2="298" y2="120" stroke="var(--accent)" strokeWidth="1.5" markerEnd={`url(#arr-a-${label})`} />
+        )}
+      </svg>
+
+      <p className="mt-4 text-sm text-[var(--muted)]">{footnote}</p>
+    </div>
+  );
+}
+
 function ProductCard({ name, tag, body, tagLive }: { name: string; tag: string; body: string; tagLive?: boolean }) {
   return (
     <div className="group rounded-2xl border border-[var(--border)] bg-[var(--card)] p-7 transition hover:border-[var(--primary)] hover:shadow-xl">
@@ -442,10 +541,7 @@ function ProductCard({ name, tag, body, tagLive }: { name: string; tag: string; 
 function StepCard({ n, title, body }: { n: string; title: string; body: string }) {
   return (
     <div className="relative z-10 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-7 transition hover:border-[var(--primary)] hover:shadow-xl">
-      <div
-        className="flex h-14 w-14 items-center justify-center rounded-2xl text-xl font-bold text-white shadow-lg"
-        style={{ background: "var(--primary)", boxShadow: "0 8px 24px color-mix(in srgb, var(--primary) 40%, transparent)" }}
-      >
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl text-xl font-bold text-white shadow-lg" style={{ background: "var(--primary)" }}>
         {n}
       </div>
       <p className="mt-5 text-lg font-semibold">{title}</p>
