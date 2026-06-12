@@ -4,9 +4,12 @@ import { createClient as createDb } from "@supabase/supabase-js";
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  const { subscriptionPda } = await req.json();
+  const { subscriptionPda, wallet } = await req.json();
   if (!subscriptionPda) {
     return NextResponse.json({ error: "subscriptionPda required" }, { status: 400 });
+  }
+  if (!wallet) {
+    return NextResponse.json({ error: "wallet required" }, { status: 400 });
   }
 
   const db = createDb(
@@ -14,6 +17,17 @@ export async function POST(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false } }
   );
+
+  // Ownership check: the subscription must belong to this wallet.
+  const { data: sub } = await db
+    .from("subscriptions")
+    .select("id, subscriber_wallet")
+    .eq("subscription_pda", subscriptionPda)
+    .maybeSingle();
+
+  if (!sub || sub.subscriber_wallet !== wallet) {
+    return NextResponse.json({ error: "not authorized" }, { status: 403 });
+  }
 
   const { error } = await db
     .from("subscriptions")

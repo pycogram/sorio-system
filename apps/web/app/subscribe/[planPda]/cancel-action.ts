@@ -76,7 +76,7 @@ export async function runCancel(opts: {
   await fetch("/api/cancel", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ subscriptionPda: opts.subscriptionPda }),
+    body: JSON.stringify({ subscriptionPda: opts.subscriptionPda, wallet: signer.address }),
   });
 
   return { signature: sigStr };

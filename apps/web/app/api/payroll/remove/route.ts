@@ -3,17 +3,33 @@ import { createClient as createDb } from "@supabase/supabase-js";
 
 export async function POST(req: Request) {
   try {
-    const { itemId } = await req.json();
+    const { itemId, wallet } = await req.json();
     if (!itemId) return NextResponse.json({ error: "Missing itemId" }, { status: 400 });
+    if (!wallet) return NextResponse.json({ error: "wallet required" }, { status: 400 });
+
     const db = createDb(
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       { auth: { persistSession: false } }
     );
+
+    // Ownership check: the item's payroll must belong to this employer wallet.
+    const { data: item } = await db
+      .from("payroll_items")
+      .select("id, payrolls(employer_wallet)")
+      .eq("id", itemId)
+      .maybeSingle();
+
+    const ownerWallet = (item as any)?.payrolls?.employer_wallet ?? null;
+    if (!item || ownerWallet !== wallet) {
+      return NextResponse.json({ error: "not authorized" }, { status: 403 });
+    }
+
     const { error } = await db
       .from("payroll_items")
       .update({ status: "removed" })
       .eq("id", itemId);
+
     if (error) throw error;
     return NextResponse.json({ ok: true });
   } catch (e: any) {

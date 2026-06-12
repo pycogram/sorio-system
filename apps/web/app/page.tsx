@@ -306,9 +306,9 @@ export default function Home() {
               className="absolute left-0 right-0 top-7 hidden h-px md:block"
               style={{ background: "linear-gradient(90deg, transparent, var(--border), var(--border), transparent)" }}
             />
-            <StepCard n="1" title="Create" body="Connect your wallet and set your plan: amount, billing period, and where payments land. Get a shareable link." />
-            <StepCard n="2" title="Subscribe" body="Your customer opens the link and approves once. They see exactly what they'll pay, broken down, before signing." />
-            <StepCard n="3" title="Collect" body="Payments are pulled automatically each cycle, straight to you, on-chain, with no manual invoicing." />
+            <StepCard n="1" title="1. Create" body="Connect your wallet and set your plan: amount, billing period, and where payments land. Get a shareable link." />
+            <StepCard n="2" title="2. Subscribe" body="Your customer opens the link and approves once. They see exactly what they'll pay, broken down, before signing." />
+            <StepCard n="3" title="3. Collect" body="Payments are pulled automatically each cycle, straight to you, on-chain, with no manual invoicing." />
           </div>
 
           <div className="mt-16 text-center">
@@ -540,10 +540,7 @@ function ProductCard({ name, tag, body, tagLive }: { name: string; tag: string; 
 
 function StepCard({ n, title, body }: { n: string; title: string; body: string }) {
   return (
-    <div className="relative z-10 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-7 transition hover:border-[var(--primary)] hover:shadow-xl">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl text-xl font-bold text-white shadow-lg" style={{ background: "var(--primary)" }}>
-        {n}
-      </div>
+    <div className="relative z-10 rounded-2xl border border-[var(--border)] bg-[var(--card)] px-7 py-4 transition hover:border-[var(--primary)] hover:shadow-xl">
       <p className="mt-5 text-lg font-semibold">{title}</p>
       <p className="mt-2 text-sm text-[var(--muted)]">{body}</p>
     </div>

@@ -151,7 +151,7 @@ export async function runApproveEmployee(opts: { itemId: string }) {
   await fetch("/api/payroll/activate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ itemId: opts.itemId, subscriptionPda }),
+    body: JSON.stringify({ itemId: opts.itemId, subscriptionPda, wallet: employerAddr }),
   });
 
   return { signature: subSig, subscriptionPda };

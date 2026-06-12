@@ -69,11 +69,13 @@ export function PayrollsOwned() {
     setRemoving(item.id);
     try {
       await runCancel({ planPda: item.plan_pda, subscriptionPda: item.subscription_pda });
+      
       await fetch("/api/payroll/remove", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemId: item.id }),
+        body: JSON.stringify({ itemId: item.id, wallet: address }),
       });
+      
       await refresh();
     } catch (e: any) {
       if (e?.message !== "USER_CANCELLED") {
