@@ -1,7 +1,52 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 import { useTheme } from "./providers";
+
+/* Reveal-on-scroll: adds .is-visible when the element enters the viewport. */
+function Reveal({
+  children,
+  className = "",
+  delay = 0,
+  as: Tag = "div",
+}: {
+  children: React.ReactNode;
+  className?: string;
+  delay?: number;
+  as?: any;
+}) {
+  const ref = useRef<HTMLElement | null>(null);
+  const [shown, setShown] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            setShown(true);
+            obs.unobserve(e.target);
+          }
+        });
+      },
+      { threshold: 0.15, rootMargin: "0px 0px -10% 0px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  return (
+    <Tag
+      ref={ref}
+      className={`reveal ${shown ? "is-visible" : ""} ${className}`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      {children}
+    </Tag>
+  );
+}
 
 export default function Home() {
   const { theme, toggle } = useTheme();
@@ -11,7 +56,7 @@ export default function Home() {
       {/* Atmospheric glow */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[600px]"
+        className="glow-drift pointer-events-none absolute inset-x-0 top-0 z-0 h-[600px]"
         style={{
           background:
             "radial-gradient(60% 80% at 50% 0%, color-mix(in srgb, var(--primary) 28%, transparent) 0%, transparent 70%)",
@@ -90,7 +135,7 @@ export default function Home() {
       <section className="relative z-10 mx-auto max-w-6xl px-8 pt-16 pb-24">
         <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-2">
           {/* Left: copy */}
-          <div>
+          <Reveal>
             <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card)] px-3 py-1 text-xs font-medium text-[var(--muted)]">
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
               Live on Solana devnet
@@ -113,10 +158,10 @@ export default function Home() {
             <p className="mt-6 text-sm text-[var(--muted)]">
               Non-custodial · No cards · No banks
             </p>
-          </div>
+          </Reveal>
 
           {/* Right: product mockup */}
-          <div className="relative">
+          <Reveal delay={150} className="relative">
             <div
               aria-hidden
               className="absolute -inset-6 z-0 rounded-3xl opacity-60 blur-2xl"
@@ -148,64 +193,72 @@ export default function Home() {
               <p className="text-xs text-[var(--muted)]">Collected today</p>
               <p className="mt-1 text-xl font-semibold text-[var(--accent)]">+ $1,240.00</p>
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* Feature strip */}
       <section className="relative z-10 border-y border-[var(--border)] bg-[var(--subtle)]">
         <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-8 py-14 sm:grid-cols-3">
-          <Feature title="Non-custodial" body="Funds move straight from payer to recipient on-chain. Paylo never holds your money." />
-          <Feature title="You stay in control" body="The approved amount is a hard on-chain ceiling. Paylo can never take more, cancel anytime." />
-          <Feature title="Approve once" body="No re-signing every cycle. One wallet approval authorizes the recurring payment. Done." />
+          <Reveal delay={0}><Feature title="Non-custodial" body="Funds move straight from payer to recipient on-chain. Paylo never holds your money." /></Reveal>
+          <Reveal delay={100}><Feature title="You stay in control" body="The approved amount is a hard on-chain ceiling. Paylo can never take more, cancel anytime." /></Reveal>
+          <Reveal delay={200}><Feature title="Approve once" body="No re-signing every cycle. One wallet approval authorizes the recurring payment. Done." /></Reveal>
         </div>
       </section>
 
       {/* Three products */}
       <section className="relative z-10 mx-auto max-w-6xl px-8 py-24">
-        <h2 className="text-center text-4xl font-semibold tracking-tight">One engine. Three products.</h2>
-        <p className="mx-auto mt-3 max-w-xl text-center text-[var(--muted)]">
-          The same recurring-payment rail, built for different jobs.
-        </p>
+        <Reveal>
+          <h2 className="text-center text-4xl font-semibold tracking-tight">One engine. Three products.</h2>
+          <p className="mx-auto mt-3 max-w-xl text-center text-[var(--muted)]">
+            The same recurring-payment rail, built for different jobs.
+          </p>
+        </Reveal>
         <div className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-3">
-          <ProductCard name="Paylo Scribe" tag="Live" tagLive body="Subscriptions for merchants. Create plans, share a link, get paid automatically. Customers subscribe and cancel anytime." />
-          <ProductCard name="Paylo Roll" tag="Live" tagLive body="Payroll on the same rail. Pay employees and contractors on a recurring schedule, in stablecoins, on-chain." />
-          <ProductCard name="Paylo API" tag="Coming soon" body="Infrastructure for builders. Integrate Paylo's recurring-payment rail directly into your own product." />
+          <Reveal delay={0}><ProductCard name="Paylo Scribe" tag="Live" tagLive body="Subscriptions for merchants. Create plans, share a link, get paid automatically. Customers subscribe and cancel anytime." /></Reveal>
+          <Reveal delay={100}><ProductCard name="Paylo Roll" tag="Live" tagLive body="Payroll on the same rail. Pay employees and contractors on a recurring schedule, in stablecoins, on-chain." /></Reveal>
+          <Reveal delay={200}><ProductCard name="Paylo API" tag="Coming soon" body="Infrastructure for builders. Integrate Paylo's recurring-payment rail directly into your own product." /></Reveal>
         </div>
       </section>
 
       {/* Two sides, one flow */}
       <section className="relative z-10 border-t border-[var(--border)] bg-[var(--subtle)]">
         <div className="mx-auto max-w-6xl px-8 py-24">
-          <h2 className="text-center text-4xl font-semibold tracking-tight">Two sides, one flow.</h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-[var(--muted)]">
-            Every Paylo product connects two people: one sets the terms, the other approves once.
-            After that, payment moves on its own each cycle.
-          </p>
+          <Reveal>
+            <h2 className="text-center text-4xl font-semibold tracking-tight">Two sides, one flow.</h2>
+            <p className="mx-auto mt-3 max-w-xl text-center text-[var(--muted)]">
+              Every Paylo product connects two people: one sets the terms, the other approves once.
+              After that, payment moves on its own each cycle.
+            </p>
+          </Reveal>
 
           <div className="mt-14 grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <RelationshipFlow
-              label="Subscriptions"
-              left="Merchant"
-              leftSub="Creates a plan"
-              right="Customer"
-              rightSub="Subscribes once"
-              topLabel="Shares plan link"
-              flowLabel="Pays each cycle"
-              flowDir="rightToLeft"
-              footnote="Customer approves once on-chain, then pays automatically. Cancels anytime."
-            />
-            <RelationshipFlow
-              label="Payroll"
-              left="Employer"
-              leftSub="Sets up payroll"
-              right="Employee"
-              rightSub="Approves once"
-              topLabel="Adds employee"
-              flowLabel="Paid each cycle"
-              flowDir="leftToRight"
-              footnote="Employer authorizes once on-chain, then salary pays out automatically each period."
-            />
+            <Reveal delay={0}>
+              <RelationshipFlow
+                label="Subscriptions"
+                left="Merchant"
+                leftSub="Creates a plan"
+                right="Customer"
+                rightSub="Subscribes once"
+                topLabel="Shares plan link"
+                flowLabel="Pays each cycle"
+                flowDir="rightToLeft"
+                footnote="Customer approves once on-chain, then pays automatically. Cancels anytime."
+              />
+            </Reveal>
+            <Reveal delay={150}>
+              <RelationshipFlow
+                label="Payroll"
+                left="Employer"
+                leftSub="Sets up payroll"
+                right="Employee"
+                rightSub="Approves once"
+                topLabel="Adds employee"
+                flowLabel="Paid each cycle"
+                flowDir="leftToRight"
+                footnote="Employer authorizes once on-chain, then salary pays out automatically each period."
+              />
+            </Reveal>
           </div>
         </div>
       </section>
@@ -224,7 +277,7 @@ export default function Home() {
         <div className="relative z-10 mx-auto max-w-6xl px-8 py-24">
           <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-2">
             {/* Left: visual */}
-            <div className="relative order-2 lg:order-1">
+            <Reveal className="relative order-2 lg:order-1">
               <div
                 aria-hidden
                 className="absolute -inset-6 z-0 rounded-3xl opacity-50 blur-2xl"
@@ -265,10 +318,10 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-            </div>
+            </Reveal>
 
             {/* Right: copy */}
-            <div className="order-1 lg:order-2">
+            <Reveal delay={150} className="order-1 lg:order-2">
               <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card)] px-3 py-1 text-xs font-medium text-[var(--muted)]">
                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary)]" />
                 For AI agents
@@ -286,7 +339,7 @@ export default function Home() {
                 <TrustRow text="Recurring, autonomous payments, no human in the loop each cycle" />
                 <TrustRow text="Full transparency: every payment is on-chain and revocable" />
               </div>
-            </div>
+            </Reveal>
           </div>
         </div>
       </section>
@@ -294,10 +347,12 @@ export default function Home() {
       {/* How it works */}
       <section className="relative z-10 border-t border-[var(--border)] bg-[var(--subtle)]">
         <div className="mx-auto max-w-6xl px-8 py-24">
-          <h2 className="text-center text-4xl font-semibold tracking-tight">How it works</h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-[var(--muted)]">
-            From zero to recurring revenue in three steps.
-          </p>
+          <Reveal>
+            <h2 className="text-center text-4xl font-semibold tracking-tight">How it works</h2>
+            <p className="mx-auto mt-3 max-w-xl text-center text-[var(--muted)]">
+              From zero to recurring revenue in three steps.
+            </p>
+          </Reveal>
 
           <div className="relative mt-16 grid grid-cols-1 gap-6 md:grid-cols-3">
             {/* connecting line (desktop) */}
@@ -306,31 +361,33 @@ export default function Home() {
               className="absolute left-0 right-0 top-7 hidden h-px md:block"
               style={{ background: "linear-gradient(90deg, transparent, var(--border), var(--border), transparent)" }}
             />
-            <StepCard n="1" title="1. Create" body="Connect your wallet and set your plan: amount, billing period, and where payments land. Get a shareable link." />
-            <StepCard n="2" title="2. Subscribe" body="Your customer opens the link and approves once. They see exactly what they'll pay, broken down, before signing." />
-            <StepCard n="3" title="3. Collect" body="Payments are pulled automatically each cycle, straight to you, on-chain, with no manual invoicing." />
+            <Reveal delay={0}><StepCard n="1" title="1. Create" body="Connect your wallet and set your plan: amount, billing period, and where payments land. Get a shareable link." /></Reveal>
+            <Reveal delay={100}><StepCard n="2" title="2. Subscribe" body="Your customer opens the link and approves once. They see exactly what they'll pay, broken down, before signing." /></Reveal>
+            <Reveal delay={200}><StepCard n="3" title="3. Collect" body="Payments are pulled automatically each cycle, straight to you, on-chain, with no manual invoicing." /></Reveal>
           </div>
 
-          <div className="mt-16 text-center">
+          <Reveal delay={250} className="mt-16 text-center">
             <a href="/create" className="rounded-lg bg-[var(--btn)] px-7 py-3 font-medium text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)]">
               Get started
             </a>
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* Gallery */}
       <section className="relative z-10 border-t border-[var(--border)]">
         <div className="mx-auto max-w-6xl px-8 py-24">
-          <h2 className="text-center text-4xl font-semibold tracking-tight">See Paylo in action</h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-[var(--muted)]">
-            From creating a plan to autonomous agent payments.
-          </p>
+          <Reveal>
+            <h2 className="text-center text-4xl font-semibold tracking-tight">See Paylo in action</h2>
+            <p className="mx-auto mt-3 max-w-xl text-center text-[var(--muted)]">
+              From creating a plan to autonomous agent payments.
+            </p>
+          </Reveal>
           <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-2">
-            <GalleryItem src="/image1.png" caption="Create a plan and share a link" />
-            <GalleryItem src="/image2.png" caption="Approve once, on-chain" />
-            <GalleryItem src="/image3.png" caption="Collected automatically every cycle" />
-            <GalleryItem src="/image4.png" caption="Give an AI agent a bounded budget" />
+            <Reveal delay={0}><GalleryItem src="/image1.png" caption="Create a plan and share a link" /></Reveal>
+            <Reveal delay={100}><GalleryItem src="/image2.png" caption="Approve once, on-chain" /></Reveal>
+            <Reveal delay={150}><GalleryItem src="/image3.png" caption="Collected automatically every cycle" /></Reveal>
+            <Reveal delay={200}><GalleryItem src="/image4.png" caption="Give an AI agent a bounded budget" /></Reveal>
           </div>
         </div>
       </section>
@@ -339,7 +396,7 @@ export default function Home() {
       <section className="relative z-10 border-t border-[var(--border)]">
         <div className="mx-auto max-w-6xl px-8 py-20">
           <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
-            <div>
+            <Reveal>
               <h2 className="text-4xl font-semibold tracking-tight">
                 Secured on-chain.<br />Trustless by design.
               </h2>
@@ -353,10 +410,10 @@ export default function Home() {
                 <TrustRow text="Hard spending ceiling enforced by the program" />
                 <TrustRow text="Cancel anytime and it revokes instantly on-chain" />
               </div>
-            </div>
+            </Reveal>
 
             {/* Visual: a "verified payment" card built from UI */}
-            <div className="relative">
+            <Reveal delay={150} className="relative">
               <div
                 aria-hidden
                 className="absolute -inset-6 z-0 rounded-3xl opacity-50 blur-2xl"
@@ -383,7 +440,7 @@ export default function Home() {
                   <div className="flex justify-between"><span className="text-[var(--muted)]">Custody</span><span className="font-medium text-[var(--accent)]">Non-custodial</span></div>
                 </div>
               </div>
-            </div>
+            </Reveal>
           </div>
         </div>
       </section>
@@ -483,7 +540,7 @@ function RelationshipFlow({
 }) {
   const flowRTL = flowDir === "rightToLeft";
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-7 transition hover:border-[var(--primary)] hover:shadow-xl">
+    <div className="hover-lift rounded-2xl border border-[var(--border)] bg-[var(--card)] p-7 hover:border-[var(--primary)] hover:shadow-xl">
       <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">{label}</p>
 
       <svg viewBox="0 0 460 200" className="mt-5 w-full" role="img" aria-label={`${left} and ${right} payment flow`}>
@@ -506,16 +563,16 @@ function RelationshipFlow({
         <text x="375" y="96" textAnchor="middle" fill="var(--foreground)" fontSize="15" fontWeight="600">{right}</text>
         <text x="375" y="116" textAnchor="middle" fill="var(--muted)" fontSize="12">{rightSub}</text>
 
-        {/* Top arrow: setup (left -> right) */}
+        {/* Top arrow: setup (left -> right), static */}
         <text x="230" y="48" textAnchor="middle" fill="var(--muted)" fontSize="12">{topLabel}</text>
         <line x1="162" y1="84" x2="298" y2="84" stroke="var(--primary)" strokeWidth="1.5" markerEnd={`url(#arr-p-${label})`} />
 
-        {/* Bottom arrow: payment flow (direction varies) */}
+        {/* Bottom arrow: payment flow (animated dashes in the pay direction) */}
         <text x="230" y="164" textAnchor="middle" fill="var(--muted)" fontSize="12">{flowLabel}</text>
         {flowRTL ? (
-          <line x1="298" y1="120" x2="162" y2="120" stroke="var(--accent)" strokeWidth="1.5" markerEnd={`url(#arr-a-${label})`} />
+          <line className="flow-line" x1="298" y1="120" x2="162" y2="120" stroke="var(--accent)" strokeWidth="1.5" markerEnd={`url(#arr-a-${label})`} />
         ) : (
-          <line x1="162" y1="120" x2="298" y2="120" stroke="var(--accent)" strokeWidth="1.5" markerEnd={`url(#arr-a-${label})`} />
+          <line className="flow-line" x1="162" y1="120" x2="298" y2="120" stroke="var(--accent)" strokeWidth="1.5" markerEnd={`url(#arr-a-${label})`} />
         )}
       </svg>
 
@@ -526,7 +583,7 @@ function RelationshipFlow({
 
 function ProductCard({ name, tag, body, tagLive }: { name: string; tag: string; body: string; tagLive?: boolean }) {
   return (
-    <div className="group rounded-2xl border border-[var(--border)] bg-[var(--card)] p-7 transition hover:border-[var(--primary)] hover:shadow-xl">
+    <div className="hover-lift group h-full rounded-2xl border border-[var(--border)] bg-[var(--card)] p-7 hover:border-[var(--primary)] hover:shadow-xl">
       <div className="flex items-center justify-between">
         <p className="text-lg font-semibold">{name}</p>
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${tagLive ? "bg-[var(--accent)] text-black" : "border border-[var(--border)] text-[var(--muted)]"}`}>
@@ -540,7 +597,7 @@ function ProductCard({ name, tag, body, tagLive }: { name: string; tag: string; 
 
 function StepCard({ n, title, body }: { n: string; title: string; body: string }) {
   return (
-    <div className="relative z-10 rounded-2xl border border-[var(--border)] bg-[var(--card)] px-7 py-4 transition hover:border-[var(--primary)] hover:shadow-xl">
+    <div className="hover-lift relative z-10 h-full rounded-2xl border border-[var(--border)] bg-[var(--card)] px-7 py-4 hover:border-[var(--primary)] hover:shadow-xl">
       <p className="mt-5 text-lg font-semibold">{title}</p>
       <p className="mt-2 text-sm text-[var(--muted)]">{body}</p>
     </div>
@@ -560,7 +617,7 @@ function TrustRow({ text }: { text: string }) {
 
 function GalleryItem({ src, caption }: { src: string; caption: string }) {
   return (
-    <figure className="group overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] transition hover:border-[var(--primary)] hover:shadow-xl">
+    <figure className="hover-lift group overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:border-[var(--primary)] hover:shadow-xl">
       <div className="overflow-hidden">
         <Image
           src={src}
