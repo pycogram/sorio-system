@@ -64,7 +64,7 @@ export function PlansOwned() {
         <a
           href="/create"
           className="rounded-lg bg-[var(--btn)] px-4 py-2 text-sm font-medium text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)]"
-        >
+        > 
           + Create plan
         </a>
       </div>

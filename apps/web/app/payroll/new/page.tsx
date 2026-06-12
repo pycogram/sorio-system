@@ -115,24 +115,24 @@ export default function NewPayrollPage() {
               <label className="text-sm font-medium">Employees</label>
               <div className="mt-2 space-y-2">
                 {employees.map((e, i) => (
-                  <div key={i} className="flex gap-2">
+                  <div key={i} className="flex w-[100%] gap-2">
                     <input
                       value={e.wallet}
                       onChange={(ev) => { updateEmployee(i, "wallet", ev.target.value); clearDone(); }}
                       placeholder="Employee wallet address"
-                      className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm outline-none focus:border-[var(--primary)]"
+                      className="w-[70%] flex-1 rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm outline-none focus:border-[var(--primary)]"
                     />
                     <input
                       value={e.amount}
                       onChange={(ev) => { updateEmployee(i, "amount", ev.target.value); clearDone(); }}
                       placeholder="0.00"
                       inputMode="decimal"
-                      className="w-28 rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm outline-none focus:border-[var(--primary)]"
+                      className="w-[25%] rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm outline-none focus:border-[var(--primary)]"
                     />
                     {employees.length > 1 && (
                       <button
                         onClick={() => removeRow(i)}
-                        className="rounded-lg border border-[var(--border)] px-3 text-sm text-[var(--muted)] transition hover:border-red-400 hover:text-red-500"
+                        className="w-fit rounded-lg border border-[var(--border)] px-3 text-sm text-[var(--muted)] transition hover:border-red-400 hover:text-red-500"
                       >
                         ×
                       </button>
