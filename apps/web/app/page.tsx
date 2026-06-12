@@ -140,7 +140,7 @@ export default function Home() {
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
               Live on Solana devnet
             </div>
-            <h1 className="mt-6 text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
+            <h1 className="mt-6 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
               Approve once.<br />Paid on <span className="text-[var(--primary)]">repeat.</span>
             </h1>
             <p className="mt-6 max-w-md text-lg text-[var(--muted)]">
