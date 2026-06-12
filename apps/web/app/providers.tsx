@@ -102,13 +102,36 @@ export function Providers({
     };
   }, [bound]);
 
-  const connect = useCallback(async () => {
+const connect = useCallback(async () => {
     const p = (await waitForProvider()) ?? getProvider();
-    if (!p) { window.open("https://phantom.app/", "_blank"); return; }
+
+    if (!p) {
+      // No injected provider. On a mobile browser, deep-link into Phantom's
+      // in-app browser loaded with this site (where the wallet works).
+      const isMobile =
+        typeof navigator !== "undefined" &&
+        /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+      if (isMobile) {
+        const url = window.location.href;
+        const ref = window.location.origin;
+        // Phantom universal link: opens this URL inside Phantom's browser.
+        window.location.href =
+          `https://phantom.app/ul/browse/${encodeURIComponent(url)}?ref=${encodeURIComponent(ref)}`;
+        return;
+      }
+
+      // Desktop without the extension: send them to install Phantom.
+      window.open("https://phantom.app/", "_blank");
+      return;
+    }
+
     try {
       const r = await p.connect();
       setAddress(r.publicKey.toString());
-    } catch { /* cancelled */ }
+    } catch {
+      /* user cancelled */
+    }
   }, []);
 
   const disconnect = useCallback(async () => {
