@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { useWallet } from "../providers";
 import { fetcher } from "../lib/fetcher";
 
@@ -20,6 +20,7 @@ type Plan = {
   merchant_amount: number | null;
   period_seconds: number;
   active: boolean;
+  hidden: boolean;
   subscribers: Subscriber[];
 };
 type Payment = {
@@ -46,16 +47,115 @@ const fmtDate = (d: string | null) =>
 
 export function PlansOwned() {
   const { address } = useWallet();
+  const { mutate } = useSWRConfig();
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [visible, setVisible] = useState(5);
+  const [showHidden, setShowHidden] = useState(false);
+  const [busyPda, setBusyPda] = useState<string | null>(null);
 
-  const { data, isLoading: loading } = useSWR<Data>(
-    address ? `/api/dashboard?wallet=${address}` : null,
-    fetcher
-  );
+  const cacheKey = address ? `/api/dashboard?wallet=${address}` : null;
+  const { data, isLoading: loading } = useSWR<Data>(cacheKey, fetcher);
 
   const activeSubs =
     data?.plans.reduce((n, p) => n + p.subscribers.filter((s) => s.status === "active").length, 0) ?? 0;
+
+  const visiblePlans = data?.plans.filter((p) => !p.hidden) ?? [];
+  const hiddenPlans = data?.plans.filter((p) => p.hidden) ?? [];
+  const shownPlans = showHidden ? [...visiblePlans, ...hiddenPlans] : visiblePlans;
+
+  async function toggleHidden(p: Plan) {
+    if (!address) return;
+    setBusyPda(p.plan_pda);
+    try {
+      const res = await fetch(`/api/plan/${p.plan_pda}/hide`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wallet: address, hidden: !p.hidden }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error ?? "Failed to update plan");
+      }
+      // Refresh the dashboard cache so the list reflects the change.
+      if (cacheKey) await mutate(cacheKey);
+    } catch (e: any) {
+      alert(e?.message ?? "Could not update plan visibility.");
+    } finally {
+      setBusyPda(null);
+    }
+  }
+
+  const renderPlanCard = (p: Plan) => {
+    const period = periodLabel(p.period_seconds);
+    const link = `${typeof window !== "undefined" ? window.location.origin : ""}/subscribe/${p.plan_pda}`;
+    const busy = busyPda === p.plan_pda;
+    return (
+      <div
+        key={p.id}
+        className={`rounded-xl border border-[var(--border)] bg-[var(--card)] p-6 ${p.hidden ? "opacity-60" : ""}`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="font-medium">{p.name}</p>
+              {p.hidden && (
+                <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[10px] uppercase tracking-wide text-[var(--muted)]">
+                  Hidden
+                </span>
+              )}
+            </div>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Customer pays {usd(p.amount)} / {period}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              onClick={() => toggleHidden(p)}
+              disabled={busy}
+              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs transition hover:border-[var(--primary)] disabled:opacity-50"
+            >
+              {busy ? "…" : p.hidden ? "Unhide" : "Hide"}
+            </button>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(link);
+                setCopiedId(p.id);
+                setTimeout(() => setCopiedId((c) => (c === p.id ? null : c)), 1500);
+              }}
+              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs transition hover:border-[var(--primary)]"
+            >
+              {copiedId === p.id ? "Copied!" : "Copy link"}
+            </button>
+          </div>
+        </div>
+
+        {p.subscribers.length > 0 ? (
+          <div className="mt-4 border-t border-[var(--border)] pt-4">
+            <p className="text-xs uppercase tracking-wide text-[var(--muted)]">
+              {p.subscribers.length} subscriber{p.subscribers.length > 1 ? "s" : ""}
+            </p>
+            <div className="mt-2 space-y-1">
+              {p.subscribers.slice(0, 3).map((s) => (
+                <div key={s.id} className="flex items-center justify-between text-sm">
+                  <span className="font-mono text-[var(--muted)]">{short(s.subscriber_wallet)}</span>
+                  <span className="text-[var(--muted)]">next: {fmtDate(s.next_collection_at)}</span>
+                </div>
+              ))}
+            </div>
+            {p.subscribers.length > 3 && (
+              <a href={`/plans/${p.plan_pda}`} className="mt-2 inline-block text-sm text-[var(--primary)] hover:underline">
+                View all {p.subscribers.length} subscribers →
+              </a>
+            )}
+          </div>
+        ) : (
+          <p className="mt-4 border-t border-[var(--border)] pt-4 text-sm text-[var(--muted)]">
+            No subscribers yet.
+          </p>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div>
@@ -64,7 +164,7 @@ export function PlansOwned() {
         <a
           href="/create"
           className="rounded-lg bg-[var(--btn)] px-4 py-2 text-sm font-medium text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)]"
-        > 
+        >
           + Create plan
         </a>
       </div>
@@ -81,68 +181,37 @@ export function PlansOwned() {
           <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Stat label="Your revenue" value={usd(data.totalRevenue)} />
             <Stat label="Active subscribers" value={String(activeSubs)} />
-            <Stat label="Plans" value={String(data.plans.length)} />
+            <Stat label="Plans" value={String(visiblePlans.length)} />
           </div>
+
+          {visiblePlans.length === 0 && !showHidden && hiddenPlans.length > 0 && (
+            <p className="mt-8 text-sm text-[var(--muted)]">
+              All your plans are hidden. Use “Show hidden plans” below to bring them back.
+            </p>
+          )}
 
           <div className="mt-8 space-y-4">
-            {data.plans.slice(0, visible).map((p) => {
-              const period = periodLabel(p.period_seconds);
-              const link = `${typeof window !== "undefined" ? window.location.origin : ""}/subscribe/${p.plan_pda}`;
-              return (
-                <div key={p.id} className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-medium">{p.name}</p>
-                      <p className="mt-1 text-sm text-[var(--muted)]">
-                        Customer pays {usd(p.amount)} / {period}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(link);
-                        setCopiedId(p.id);
-                        setTimeout(() => setCopiedId((c) => (c === p.id ? null : c)), 1500);
-                      }}
-                      className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs transition hover:border-[var(--primary)]"
-                    >
-                      {copiedId === p.id ? "Copied!" : "Copy link"}
-                    </button>
-                  </div>
-
-                  {p.subscribers.length > 0 ? (
-                    <div className="mt-4 border-t border-[var(--border)] pt-4">
-                      <p className="text-xs uppercase tracking-wide text-[var(--muted)]">
-                        {p.subscribers.length} subscriber{p.subscribers.length > 1 ? "s" : ""}
-                      </p>
-                      <div className="mt-2 space-y-1">
-                        {p.subscribers.slice(0, 3).map((s) => (
-                          <div key={s.id} className="flex items-center justify-between text-sm">
-                            <span className="font-mono text-[var(--muted)]">{short(s.subscriber_wallet)}</span>
-                            <span className="text-[var(--muted)]">next: {fmtDate(s.next_collection_at)}</span>
-                          </div>
-                        ))}
-                      </div>
-                      {p.subscribers.length > 3 && (
-                        <a href={`/plans/${p.plan_pda}`} className="mt-2 inline-block text-sm text-[var(--primary)] hover:underline">
-                          View all {p.subscribers.length} subscribers →
-                        </a>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="mt-4 border-t border-[var(--border)] pt-4 text-sm text-[var(--muted)]">
-                      No subscribers yet.
-                    </p>
-                  )}
-                </div>
-              );
-            })}
+            {shownPlans.slice(0, visible).map(renderPlanCard)}
           </div>
-          {visible < data.plans.length && (
+
+          {visible < shownPlans.length && (
             <button
               onClick={() => setVisible((v) => v + 10)}
               className="mt-4 text-sm text-[var(--primary)] hover:underline"
             >
-              View more ({data.plans.length - visible} left)
+              View more ({shownPlans.length - visible} left)
+            </button>
+          )}
+
+          {hiddenPlans.length > 0 && (
+            <button
+              onClick={() => {
+                setShowHidden((v) => !v);
+                setVisible(5);
+              }}
+              className="mt-6 block text-sm text-[var(--muted)] transition hover:text-[var(--foreground)]"
+            >
+              {showHidden ? "Hide hidden plans" : `Show hidden plans (${hiddenPlans.length})`}
             </button>
           )}
         </>

@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
 
   const { data: plans } = await db
     .from("plans")
-    .select("id, plan_pda, name, amount, merchant_amount, period_seconds, active")
+    .select("id, plan_pda, name, amount, merchant_amount, period_seconds, active, hidden")
     .eq("merchant_id", merchant.id)
     .order("id", { ascending: false });
 
