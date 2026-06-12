@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useWallet } from "../providers";
 import { runApproveEmployee } from "./approve-action";
 import { runCancel } from "../subscribe/[planPda]/cancel-action";
@@ -20,7 +20,7 @@ type Item = {
   last_payment_at: string | null;
   payroll_history: HistoryRow[];
 };
-type Payroll = { id: string; name: string; period_seconds: number; payroll_items: Item[] };
+type Payroll = { id: string; name: string; period_seconds: number; hidden: boolean; payroll_items: Item[] };
 
 const usd = (n: number) => `$${(n / 1_000_000).toFixed(2)}`;
 const periodLabel = (s: number) =>
@@ -34,6 +34,8 @@ export function PayrollsOwned() {
   const [approving, setApproving] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [showRemoved, setShowRemoved] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
+  const [hidingId, setHidingId] = useState<string | null>(null);
   const [visible, setVisible] = useState(5);
 
   const { data, isLoading: loading, mutate } = useSWR(
@@ -83,6 +85,31 @@ export function PayrollsOwned() {
     }
   }
 
+  async function toggleHidden(p: Payroll) {
+    if (!address) return;
+    setHidingId(p.id);
+    try {
+      const res = await fetch(`/api/payroll/${p.id}/hide`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wallet: address, hidden: !p.hidden }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error ?? "Failed to update payroll");
+      }
+      await refresh();
+    } catch (e: any) {
+      alert(e?.message ?? "Could not update payroll visibility.");
+    } finally {
+      setHidingId(null);
+    }
+  }
+
+  const visiblePayrolls = payrolls?.filter((p) => !p.hidden) ?? [];
+  const hiddenPayrolls = payrolls?.filter((p) => p.hidden) ?? [];
+  const shownPayrolls = showHidden ? [...visiblePayrolls, ...hiddenPayrolls] : visiblePayrolls;
+
   return (
     <div>
       <div className="flex items-center justify-between">
@@ -117,7 +144,7 @@ export function PayrollsOwned() {
                 )
               )}
             />
-            <Stat label="Payrolls" value={String(payrolls.length)} />
+            <Stat label="Payrolls" value={String(visiblePayrolls.length)} />
             <Stat label="Employees" value={String(payrolls.reduce((n, p) => n + p.payroll_items.length, 0))} />
             <Stat
               label="Active"
@@ -125,20 +152,44 @@ export function PayrollsOwned() {
             />
           </div>
 
+          {visiblePayrolls.length === 0 && !showHidden && hiddenPayrolls.length > 0 && (
+            <p className="mt-8 text-sm text-[var(--muted)]">
+              All your payrolls are hidden. Use “Show hidden payrolls” below to bring them back.
+            </p>
+          )}
+
           <div className="mt-8 space-y-5">
-            {payrolls.slice(0, visible).map((p) => {
+            {shownPayrolls.slice(0, visible).map((p) => {
               const period = periodLabel(p.period_seconds);
               const total = p.payroll_items.reduce((s, i) => s + i.amount, 0);
               const removedCount = p.payroll_items.filter((i) => i.status === "removed").length;
+              const hiding = hidingId === p.id;
               return (
-                <div key={p.id} className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
-                  <div className="flex items-center justify-between">
+                <div
+                  key={p.id}
+                  className={`rounded-xl border border-[var(--border)] bg-[var(--card)] p-6 ${p.hidden ? "opacity-60" : ""}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-lg font-semibold">{p.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-lg font-semibold">{p.name}</p>
+                        {p.hidden && (
+                          <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[10px] uppercase tracking-wide text-[var(--muted)]">
+                            Hidden
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm text-[var(--muted)]">
                         {p.payroll_items.length} {p.payroll_items.length === 1 ? "employee" : "employees"} · {usd(total)} / {period}
                       </p>
                     </div>
+                    <button
+                      onClick={() => toggleHidden(p)}
+                      disabled={hiding}
+                      className="shrink-0 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs transition hover:border-[var(--primary)] disabled:opacity-50"
+                    >
+                      {hiding ? "…" : p.hidden ? "Unhide" : "Hide"}
+                    </button>
                   </div>
 
                   <div className="mt-4 space-y-2">
@@ -199,12 +250,25 @@ export function PayrollsOwned() {
               );
             })}
           </div>
-          {visible < payrolls.length && (
+
+          {visible < shownPayrolls.length && (
             <button
               onClick={() => setVisible((v) => v + 10)}
               className="mt-4 text-sm text-[var(--primary)] hover:underline"
             >
-              View more ({payrolls.length - visible} left)
+              View more ({shownPayrolls.length - visible} left)
+            </button>
+          )}
+
+          {hiddenPayrolls.length > 0 && (
+            <button
+              onClick={() => {
+                setShowHidden((v) => !v);
+                setVisible(5);
+              }}
+              className="mt-6 block text-sm text-[var(--muted)] transition hover:text-[var(--foreground)]"
+            >
+              {showHidden ? "Hide hidden payrolls" : `Show hidden payrolls (${hiddenPayrolls.length})`}
             </button>
           )}
         </>
