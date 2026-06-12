@@ -74,8 +74,8 @@ export default function NewPayrollPage() {
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <Navbar />
-      <div className="mx-auto max-w-5xl px-8 py-12">
-        <Link href="/dashboard" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)]">← Dashboard</Link>
+      <div className="mx-auto max-w-5xl px-8 py-14 mt-12 md:mt-0">
+        <Link href="/payroll" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)]">← Payroll</Link>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">New payroll</h1>
         <p className="mt-2 text-[var(--muted)]">Name it, set a schedule, and add the people you pay.</p>
 

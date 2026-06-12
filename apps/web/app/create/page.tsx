@@ -50,7 +50,7 @@ export default function CreatePlanPage() {
       {/* nav */}
       <Navbar />
 
-      <div className="mx-auto max-w-5xl px-8 py-14">
+      <div className="mx-auto max-w-5xl px-8 py-14 mt-12 md:mt-0">
         <Link href="/plans" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)]">← Go to Plan</Link>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">Create a plan</h1>
         <p className="mt-2 text-[var(--muted)]">

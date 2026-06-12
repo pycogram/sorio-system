@@ -62,131 +62,131 @@ export default function SubscribePage({
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <Navbar />
-
-      <div className="mx-auto max-w-5xl px-8 pt-8">
+      
+      <div className="mx-auto max-w-5xl px-8 py-14 mt-12 md:mt-0">
         <Link href="/dashboard" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)]">← Dashboard</Link>
-      </div>
+        
+        <div className="mx-auto grid max-w-auto grid-cols-1 gap-12 py-4 md:py-6 md:grid-cols-2">
+          {/* LEFT — context & trust */}
+          <div className="flex flex-col justify-center">
+            {loading && <p className="text-[var(--muted)]">Loading…</p>}
+            {notFound && <p className="text-[var(--muted)]">Plan not found.</p>}
+            {plan && (
+              <>
+                <p className="text-sm font-medium uppercase tracking-wide text-[var(--muted)]">
+                  {plan.merchants?.name ?? "Merchant"}
+                </p>
+                <h1 className="mt-2 text-4xl font-semibold tracking-tight">
+                  {plan.name}
+                </h1>
+                <p className="mt-4 text-[var(--muted)] leading-relaxed">
+                  A recurring subscription paid in USDC on Solana. You approve once,
+                  payments are collected automatically each {period}. No card, no bank,
+                  cancel anytime.
+                </p>
 
-      <div className="mx-auto grid max-w-5xl grid-cols-1 gap-12 px-8 py-16 md:grid-cols-2 md:py-12 lg:py-4">
-        {/* LEFT — context & trust */}
-        <div className="flex flex-col justify-center">
-          {loading && <p className="text-[var(--muted)]">Loading…</p>}
-          {notFound && <p className="text-[var(--muted)]">Plan not found.</p>}
+                <div className="mt-8 space-y-4">
+                  <Step n="1" title="Approve once">
+                    Connect your wallet and authorize the recurring payment. You sign a
+                    single time.
+                  </Step>
+                  <Step n="2" title={`Auto-renews each ${period}`}>
+                    ${(plan.amount / 1_000_000).toFixed(2)} is collected every {period},
+                    automatically.
+                  </Step>
+                  <Step n="3" title="Cancel anytime">
+                    Revoke the authorization whenever you want. You stay in control.
+                  </Step>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* RIGHT — checkout card */}
           {plan && (
-            <>
-              <p className="text-sm font-medium uppercase tracking-wide text-[var(--muted)]">
-                {plan.merchants?.name ?? "Merchant"}
-              </p>
-              <h1 className="mt-2 text-4xl font-semibold tracking-tight">
-                {plan.name}
-              </h1>
-              <p className="mt-4 text-[var(--muted)] leading-relaxed">
-                A recurring subscription paid in USDC on Solana. You approve once,
-                payments are collected automatically each {period}. No card, no bank,
-                cancel anytime.
-              </p>
+            <div className="flex items-center">
+              <div className="w-full rounded-2xl border border-[var(--border)] bg-[var(--card)] p-8 shadow-sm">
+                <p className="text-sm text-[var(--muted)]">{plan.name}</p>
+                <p className="mt-2 text-5xl font-semibold tracking-tight">
+                  ${(plan.amount / 1_000_000).toFixed(2)}
+                  <span className="text-lg font-normal text-[var(--muted)]">
+                    {" "}/ {period}
+                  </span>
+                </p>
 
-              <div className="mt-8 space-y-4">
-                <Step n="1" title="Approve once">
-                  Connect your wallet and authorize the recurring payment. You sign a
-                  single time.
-                </Step>
-                <Step n="2" title={`Auto-renews each ${period}`}>
-                  ${(plan.amount / 1_000_000).toFixed(2)} is collected every {period},
-                  automatically.
-                </Step>
-                <Step n="3" title="Cancel anytime">
-                  Revoke the authorization whenever you want. You stay in control.
-                </Step>
+                <div className="my-6 h-px bg-[var(--border)]" />
+
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[var(--muted)]">Subscription</span>
+                  <span className="font-medium">
+                    ${(plan.merchant_amount / 1_000_000).toFixed(2)}
+                  </span>
+                </div>
+                <div className="mt-2 flex items-center justify-between text-sm">
+                  <span className="text-[var(--muted)]">Service fee</span>
+                  <span className="font-medium">
+                    ${((plan.amount - plan.merchant_amount) / 1_000_000).toFixed(2)}
+                  </span>
+                </div>
+                <div className="my-3 h-px bg-[var(--border)]" />
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[var(--muted)]">Total per {period}</span>
+                  <span className="font-semibold">
+                    ${(plan.amount / 1_000_000).toFixed(2)}
+                  </span>
+                </div>
+
+                <button
+                  disabled={!address || alreadySubscribed || subscribing || done || isOwnPlan}
+                  onClick={async () => {
+                    if (!plan || !address) return;
+                    setSubscribing(true);
+                    try {
+                      const r = await runSubscribe({
+                        planPda: plan.plan_pda,
+                        merchantWallet: plan.merchants?.destination_wallet ?? "",
+                      });
+                      console.log("subscribed:", r);
+                      setDone(true);
+                    } catch (e: any) {
+                      console.error("subscribe failed:", e);
+                      alert("Failed: " + (e?.message ?? e));
+                    } finally {
+                      setSubscribing(false);
+                    }
+                  }}
+                  className="mt-7 w-full rounded-lg bg-[var(--btn)] px-4 py-3 font-medium text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)] disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {done
+                    ? "Subscribed ✓"
+                    : isOwnPlan
+                    ? "This is your plan"
+                    : alreadySubscribed
+                    ? "Already subscribed ✓"
+                    : subscribing
+                    ? "Confirming…"
+                    : address
+                    ? "Subscribe"
+                    : "Connect wallet to subscribe"}
+                </button>
+
+                {isOwnPlan && (
+                  <p className="mt-3 text-center text-sm text-[var(--muted)]">
+                    You can&apos;t subscribe to your own plan.
+                  </p>
+                )}
+                {done && (
+                  <p className="mt-3 text-center text-sm text-[var(--accent)]">
+                    You're all set. Payments will renew automatically.
+                  </p>
+                )}
+                <p className="mt-3 text-center text-xs text-[var(--muted)]">
+                  Secured on Solana · cancel anytime
+                </p>
               </div>
-            </>
+            </div>
           )}
         </div>
-
-        {/* RIGHT — checkout card */}
-        {plan && (
-          <div className="flex items-center">
-            <div className="w-full rounded-2xl border border-[var(--border)] bg-[var(--card)] p-8 shadow-sm">
-              <p className="text-sm text-[var(--muted)]">{plan.name}</p>
-              <p className="mt-2 text-5xl font-semibold tracking-tight">
-                ${(plan.amount / 1_000_000).toFixed(2)}
-                <span className="text-lg font-normal text-[var(--muted)]">
-                  {" "}/ {period}
-                </span>
-              </p>
-
-              <div className="my-6 h-px bg-[var(--border)]" />
-
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-[var(--muted)]">Subscription</span>
-                <span className="font-medium">
-                  ${(plan.merchant_amount / 1_000_000).toFixed(2)}
-                </span>
-              </div>
-              <div className="mt-2 flex items-center justify-between text-sm">
-                <span className="text-[var(--muted)]">Service fee</span>
-                <span className="font-medium">
-                  ${((plan.amount - plan.merchant_amount) / 1_000_000).toFixed(2)}
-                </span>
-              </div>
-              <div className="my-3 h-px bg-[var(--border)]" />
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-[var(--muted)]">Total per {period}</span>
-                <span className="font-semibold">
-                  ${(plan.amount / 1_000_000).toFixed(2)}
-                </span>
-              </div>
-
-              <button
-                disabled={!address || alreadySubscribed || subscribing || done || isOwnPlan}
-                onClick={async () => {
-                  if (!plan || !address) return;
-                  setSubscribing(true);
-                  try {
-                    const r = await runSubscribe({
-                      planPda: plan.plan_pda,
-                      merchantWallet: plan.merchants?.destination_wallet ?? "",
-                    });
-                    console.log("subscribed:", r);
-                    setDone(true);
-                  } catch (e: any) {
-                    console.error("subscribe failed:", e);
-                    alert("Failed: " + (e?.message ?? e));
-                  } finally {
-                    setSubscribing(false);
-                  }
-                }}
-                className="mt-7 w-full rounded-lg bg-[var(--btn)] px-4 py-3 font-medium text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)] disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {done
-                  ? "Subscribed ✓"
-                  : isOwnPlan
-                  ? "This is your plan"
-                  : alreadySubscribed
-                  ? "Already subscribed ✓"
-                  : subscribing
-                  ? "Confirming…"
-                  : address
-                  ? "Subscribe"
-                  : "Connect wallet to subscribe"}
-              </button>
-
-              {isOwnPlan && (
-                <p className="mt-3 text-center text-sm text-[var(--muted)]">
-                  You can&apos;t subscribe to your own plan.
-                </p>
-              )}
-              {done && (
-                <p className="mt-3 text-center text-sm text-[var(--accent)]">
-                  You're all set. Payments will renew automatically.
-                </p>
-              )}
-              <p className="mt-3 text-center text-xs text-[var(--muted)]">
-                Secured on Solana · cancel anytime
-              </p>
-            </div>
-          </div>
-        )}
       </div>
     </main>
   );
