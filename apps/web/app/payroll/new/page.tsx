@@ -5,12 +5,14 @@ import { useState } from "react";
 import { Navbar } from "../../navbar";
 import { useWallet } from "../../providers";
 
-type Employee = { wallet: string; amount: string };
+type Employee = { wallet: string; amount: string; times: string };
 
 const PERIODS = [
+  { label: "Hourly", seconds: 3600 },
   { label: "Daily", seconds: 86400 },
   { label: "Weekly", seconds: 604800 },
   { label: "Monthly", seconds: 2592000 },
+  { label: "Yearly", seconds: 31536000 },
 ];
 
 const FEE_PERCENT = 2;
@@ -19,13 +21,13 @@ export default function NewPayrollPage() {
   const { address } = useWallet();
   const [name, setName] = useState("");
   const [period, setPeriod] = useState(2592000);
-  const [employees, setEmployees] = useState<Employee[]>([{ wallet: "", amount: "" }]);
+  const [employees, setEmployees] = useState<Employee[]>([{ wallet: "", amount: "", times: "" }]);
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
 
   const updateEmployee = (i: number, field: keyof Employee, value: string) =>
     setEmployees((prev) => prev.map((e, idx) => (idx === i ? { ...e, [field]: value } : e)));
-  const addRow = () => setEmployees((prev) => [...prev, { wallet: "", amount: "" }]);
+  const addRow = () => setEmployees((prev) => [...prev, { wallet: "", amount: "", times: "" }]);
   const removeRow = (i: number) => setEmployees((prev) => prev.filter((_, idx) => idx !== i));
 
   const salaryTotal = employees.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
@@ -54,6 +56,7 @@ export default function NewPayrollPage() {
           employees: employees.map((e) => ({
             wallet: e.wallet.trim(),
             amount: Math.round(parseFloat(e.amount) * 1_000_000),
+            maxPayments: parseInt(e.times) > 0 ? parseInt(e.times) : null,
           })),
         }),
       });
@@ -113,6 +116,7 @@ export default function NewPayrollPage() {
 
             <div>
               <label className="text-sm font-medium">Employees</label>
+              <p className="mt-1 text-xs text-[var(--muted)]">Enter: Wallet address | Payment amount | Number of times (Leaves it empty equals to infinity).</p>
               <div className="mt-2 space-y-2">
                 {employees.map((e, i) => (
                   <div key={i} className="flex w-[100%] gap-2">
@@ -120,14 +124,22 @@ export default function NewPayrollPage() {
                       value={e.wallet}
                       onChange={(ev) => { updateEmployee(i, "wallet", ev.target.value); clearDone(); }}
                       placeholder="Employee wallet address"
-                      className="w-[70%] flex-1 rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm outline-none focus:border-[var(--primary)]"
+                      className="w-[60%] flex-1 rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm outline-none focus:border-[var(--primary)]"
                     />
                     <input
                       value={e.amount}
                       onChange={(ev) => { updateEmployee(i, "amount", ev.target.value); clearDone(); }}
                       placeholder="0.00"
                       inputMode="decimal"
-                      className="w-[25%] rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm outline-none focus:border-[var(--primary)]"
+                      className="w-[20%] rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm outline-none focus:border-[var(--primary)]"
+                    />
+                    <input
+                      value={e.times}
+                      onChange={(ev) => { updateEmployee(i, "times", ev.target.value); clearDone(); }}
+                      placeholder="∞"
+                      inputMode="numeric"
+                      title="Number of payments (blank = forever)"
+                      className="w-[15%] rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm outline-none focus:border-[var(--primary)]"
                     />
                     {employees.length > 1 && (
                       <button

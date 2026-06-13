@@ -9,6 +9,8 @@ export const runtime = "nodejs";
 const USDC_MINT = address("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 
 const periodHoursMap: Record<string, number> = {
+  hourly: 1,  
+  daily: 24,    
   weekly: 168,
   monthly: 720,
   yearly: 8760,

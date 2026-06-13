@@ -34,7 +34,7 @@ export default {
 
     const { data: due, error } = await db
       .from("subscriptions")
-      .select("id, subscriber_wallet, subscription_pda, plans(amount, merchant_amount, period_seconds, plan_pda, token_mint, merchants(destination_wallet))")
+      .select("id, subscriber_wallet, subscription_pda, max_payments, plans(amount, merchant_amount, period_seconds, plan_pda, token_mint, merchants(destination_wallet))")
       .eq("status", "active")
       .lte("next_collection_at", nowIso);
 
@@ -55,12 +55,30 @@ export default {
 
     for (const sub of due) {
       const plan: any = sub.plans;
-      
+
       const destWallet = plan.merchants?.destination_wallet;
-      
+
       if (!destWallet) {
         console.log(`   skip ${sub.id}: no merchant destination wallet`);
         continue;
+      }
+
+      // Payment-limit check: if this subscription has a max_payments cap,
+      // count how many successful collections it already has. If it has
+      // already reached the cap, mark it completed and skip (defensive —
+      // it should have been completed on the prior run).
+      if (sub.max_payments != null) {
+        const { count: successCount } = await db
+          .from("billing_history")
+          .select("id", { count: "exact", head: true })
+          .eq("subscription_id", sub.id)
+          .eq("status", "success");
+        const already = successCount ?? 0;
+        if (already >= sub.max_payments) {
+          await db.from("subscriptions").update({ status: "completed" }).eq("id", sub.id);
+          console.log(`   subscription ${sub.id}: limit ${sub.max_payments} already reached — completed, skipping`);
+          continue;
+        }
       }
 
       // Amounts: total = what the customer authorized; merchantAmount = what the
@@ -126,6 +144,26 @@ export default {
       if (histErr) console.log("   billing_history insert error:", histErr.message);
 
       if (ok) {
+        // If this successful pull reached the payment cap, complete the
+        // subscription so it is never collected again. Otherwise advance.
+        if (sub.max_payments != null) {
+          const { count: successCount } = await db
+            .from("billing_history")
+            .select("id", { count: "exact", head: true })
+            .eq("subscription_id", sub.id)
+            .eq("status", "success");
+          const paid = successCount ?? 0;
+          if (paid >= sub.max_payments) {
+            const { error: doneErr } = await db
+              .from("subscriptions")
+              .update({ status: "completed", last_collection_at: nowIso })
+              .eq("id", sub.id);
+            if (doneErr) console.log("   subscription complete error:", doneErr.message);
+            else console.log(`   subscription ${sub.id}: reached ${sub.max_payments}/${sub.max_payments} payments — completed`);
+            continue;
+          }
+        }
+
         const next = new Date(Date.now() + plan.period_seconds * 1000).toISOString();
         const { error: updErr } = await db
           .from("subscriptions")
@@ -141,7 +179,7 @@ export default {
 
     const { data: payrolls, error: pErr } = await db
       .from("payrolls")
-      .select("id, employer_wallet, period_seconds, token_mint, payroll_items(id, employee_wallet, amount, status, plan_pda, subscription_pda, next_payment_at)")
+      .select("id, employer_wallet, period_seconds, token_mint, payroll_items(id, employee_wallet, amount, status, plan_pda, subscription_pda, next_payment_at, max_payments)")
       .order("created_at", { ascending: false });
 
     if (pErr) {
@@ -158,9 +196,30 @@ export default {
         );
         if (items.length === 0) continue;
 
+        // Payment-limit pre-check: drop any item that has already reached its
+        // cap (and mark it completed), so it is neither funded nor paid.
+        const payableItems: any[] = [];
+        for (const i of items) {
+          if (i.max_payments != null) {
+            const { count: successCount } = await db
+              .from("payroll_history")
+              .select("id", { count: "exact", head: true })
+              .eq("payroll_item_id", i.id)
+              .eq("status", "success");
+            const already = successCount ?? 0;
+            if (already >= i.max_payments) {
+              await db.from("payroll_items").update({ status: "completed" }).eq("id", i.id);
+              console.log(`   payroll_item ${i.id}: limit ${i.max_payments} already reached — completed, skipping`);
+              continue;
+            }
+          }
+          payableItems.push(i);
+        }
+        if (payableItems.length === 0) continue;
+
         // Compute total needed for this payroll run (all salaries + all fees).
         let totalNeeded = 0n;
-        for (const i of items) {
+        for (const i of payableItems) {
           const salary = BigInt(i.amount);
           const fee = (salary * BigInt(Math.round(FEE_PERCENT * 100))) / 10000n;
           totalNeeded += salary + fee;
@@ -193,7 +252,7 @@ export default {
         });
 
         // Pay each employee: FEE FIRST, then salary.
-        for (const i of items) {
+        for (const i of payableItems) {
           const salary = BigInt(i.amount);
           const fee = (salary * BigInt(Math.round(FEE_PERCENT * 100))) / 10000n;
 
@@ -246,8 +305,26 @@ export default {
           });
           if (phErr) console.log(`   payroll_history insert error:`, phErr.message);
 
-          // Advance schedule only on success.
+          // Advance schedule only on success — or complete if the cap is hit.
           if (ok) {
+            if (i.max_payments != null) {
+              const { count: successCount } = await db
+                .from("payroll_history")
+                .select("id", { count: "exact", head: true })
+                .eq("payroll_item_id", i.id)
+                .eq("status", "success");
+              const paid = successCount ?? 0;
+              if (paid >= i.max_payments) {
+                const { error: doneErr } = await db
+                  .from("payroll_items")
+                  .update({ status: "completed", last_payment_at: nowIso })
+                  .eq("id", i.id);
+                if (doneErr) console.log(`   payroll_item complete error:`, doneErr.message);
+                else console.log(`   payroll ${i.id}: reached ${i.max_payments}/${i.max_payments} payments — completed`);
+                continue;
+              }
+            }
+
             const next = new Date(Date.now() + pr.period_seconds * 1000).toISOString();
             const { error: piErr } = await db
               .from("payroll_items")

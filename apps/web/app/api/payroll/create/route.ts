@@ -31,11 +31,13 @@ export async function POST(req: Request) {
     if (pErr) throw pErr;
 
     // 2. Insert the employees as payroll_items (status 'pending' until approved on-chain)
-    const items = employees.map((e: { wallet: string; amount: number }) => ({
+    const items = employees.map((e: { wallet: string; amount: number; maxPayments?: number | null }) => ({
       payroll_id: payroll.id,
       employee_wallet: e.wallet,
       amount: e.amount,
       status: "pending",
+      max_payments:
+        typeof e.maxPayments === "number" && e.maxPayments > 0 ? e.maxPayments : null,
     }));
 
     const { error: iErr } = await supabase.from("payroll_items").insert(items);

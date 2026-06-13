@@ -17,7 +17,7 @@ type Plan = {
 };
 
 const periodLabel = (s: number) =>
-  s === 604800 ? "week" : s === 2592000 ? "month" : s === 31536000 ? "year" : `${s / 3600}h`;
+  s === 3600 ? "hour" : s === 86400 ? "day" : s === 604800 ? "week" : s === 2592000 ? "month" : s === 31536000 ? "year" : `${s / 3600}h`;
 
 export default function SubscribePage({
   params,
@@ -32,6 +32,8 @@ export default function SubscribePage({
   const [alreadySubscribed, setAlreadySubscribed] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
   const [done, setDone] = useState(false);
+  const [limitOn, setLimitOn] = useState(false);
+  const [times, setTimes] = useState("3");
 
   useEffect(() => {
     fetch(`/api/plan/${planPda}`)
@@ -145,6 +147,7 @@ export default function SubscribePage({
                       const r = await runSubscribe({
                         planPda: plan.plan_pda,
                         merchantWallet: plan.merchants?.destination_wallet ?? "",
+                        maxPayments: limitOn ? parseInt(times) || null : null,
                       });
                       console.log("subscribed:", r);
                       setDone(true);
@@ -169,6 +172,43 @@ export default function SubscribePage({
                     ? "Subscribe"
                     : "Connect wallet to subscribe"}
                 </button>
+
+                <div className="mt-6 rounded-lg border border-[var(--border)] p-4">
+                  <label className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Limit number of payments</span>
+                    <input
+                      type="checkbox"
+                      checked={limitOn}
+                      onChange={(e) => setLimitOn(e.target.checked)}
+                      className="h-4 w-4 accent-[var(--primary)]"
+                    />
+                  </label>
+                  {!limitOn ? (
+                    <p className="mt-2 text-xs text-[var(--muted)]">
+                      Renews forever until you cancel.
+                    </p>
+                  ) : (
+                    <div className="mt-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-[var(--muted)]">Stop after</span>
+                        <input
+                          type="number"
+                          min={1}
+                          value={times}
+                          onChange={(e) => setTimes(e.target.value)}
+                          className="w-20 rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-1.5 text-sm outline-none focus:border-[var(--primary)]"
+                        />
+                        <span className="text-sm text-[var(--muted)]">payments</span>
+                      </div>
+                      {parseInt(times) > 0 && (
+                        <p className="mt-2 text-xs text-[var(--muted)]">
+                          ${(plan.amount / 1_000_000).toFixed(2)} × {parseInt(times)} ={" "}
+                          ${((plan.amount * parseInt(times)) / 1_000_000).toFixed(2)} total, then auto-stops.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 {isOwnPlan && (
                   <p className="mt-3 text-center text-sm text-[var(--muted)]">

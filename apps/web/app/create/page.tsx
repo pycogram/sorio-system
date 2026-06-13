@@ -16,6 +16,8 @@ export default function CreatePlanPage() {
   const [copied, setCopied] = useState(false);
 
   const periods: Record<string, string> = {
+    hourly: "hour",   
+    daily: "day",
     weekly: "week",
     monthly: "month",
     yearly: "year",
@@ -37,7 +39,7 @@ export default function CreatePlanPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to create plan");
-      setCreated({ link: `paylo.app/subscribe/${data.planPda}` });
+      setCreated({ link : `${typeof window !== "undefined" ? window.location.origin : ""}/subscribe/${data.planPda}` });
     } catch (e: any) {
       setError(e?.message ?? "Something went wrong");
     } finally {

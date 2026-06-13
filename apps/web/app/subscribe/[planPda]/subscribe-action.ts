@@ -82,6 +82,7 @@ async function waitForConfirm(rpc: any, sigStr: string) {
 export async function runSubscribe(opts: {
   planPda: string;
   merchantWallet: string;
+  maxPayments?: number | null;
 }) {
   const signer = makePhantomSigner();
   const rpc = createSolanaRpc(RPC_URL);
@@ -148,6 +149,7 @@ export async function runSubscribe(opts: {
       planPda: opts.planPda,
       subscriberWallet: subscriberAddr,
       subscriptionPda,
+      maxPayments: opts.maxPayments ?? null,
     }),
   });
 

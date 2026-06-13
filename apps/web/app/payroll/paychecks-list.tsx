@@ -7,7 +7,8 @@ import { fetcher } from "../lib/fetcher";
 
 const usd = (n: number) => `$${(n / 1_000_000).toFixed(2)}`;
 const periodLabel = (s: number) =>
-  s === 86400 ? "day" : s === 604800 ? "week" : s === 2592000 ? "month" : `${s / 3600}h`;
+  s === 3600 ? "hour" : s === 86400 ? "day" : s === 604800 ? "week" : s === 2592000 ? "month" : `${s / 3600}h`;
+
 const short = (w: string) => `${w.slice(0, 4)}…${w.slice(-4)}`;
 const fmtDate = (d: string | null) =>
   d ? new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—";

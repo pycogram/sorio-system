@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
-    const { planPda, subscriberWallet, subscriptionPda } = await req.json();
+    const { planPda, subscriberWallet, subscriptionPda, maxPayments } = await req.json();
     if (!planPda || !subscriberWallet || !subscriptionPda) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
@@ -34,6 +34,8 @@ export async function POST(req: NextRequest) {
         subscriber_wallet: subscriberWallet,
         subscription_pda: subscriptionPda,
         next_collection_at: new Date().toISOString(),
+        max_payments:
+          typeof maxPayments === "number" && maxPayments > 0 ? maxPayments : null,
       })
       .select("id")
       .single();
