@@ -82,7 +82,7 @@ export default function CreatePlanPage() {
             </Field>
 
             <Field label="Billing period">
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {Object.keys(periods).map((p) => (
                   <button
                     key={p}

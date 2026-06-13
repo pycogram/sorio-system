@@ -66,7 +66,7 @@ export default function NewPayrollPage() {
       // Reset the form so the employer can't accidentally recreate the same payroll.
       setName("");
       setPeriod(2592000);
-      setEmployees([{ wallet: "", amount: "" }]);
+      setEmployees([{ wallet: "", amount: "", times: "" }]);
     } catch (e: any) {
       alert("Failed: " + (e?.message ?? e));
     } finally {
@@ -97,7 +97,7 @@ export default function NewPayrollPage() {
 
             <div>
               <label className="text-sm font-medium">Pay schedule</label>
-              <div className="mt-2 flex gap-2">
+              <div className="mt-2 flex flex-wrap gap-2">
                 {PERIODS.map((p) => (
                   <button
                     key={p.seconds}
@@ -116,8 +116,19 @@ export default function NewPayrollPage() {
 
             <div>
               <label className="text-sm font-medium">Employees</label>
-              <p className="mt-1 text-xs text-[var(--muted)]">Enter: Wallet address | Payment amount | Number of times (Leaves it empty equals to infinity).</p>
-              <div className="mt-2 space-y-2">
+              <p className="mt-1 text-xs text-[var(--muted)]">
+                Set how many times each employee is paid. Leave “times” blank to pay forever.
+              </p>
+
+              {/* Column labels (align with the inputs below) */}
+              <div className="mt-3 flex w-full gap-2 px-1">
+                <span className="w-[60%] flex-1 text-xs font-medium text-[var(--muted)]">Wallet address</span>
+                <span className="w-[20%] text-xs font-medium text-[var(--muted)]">Amount</span>
+                <span className="w-[15%] text-xs font-medium text-[var(--muted)]">Times</span>
+                {employees.length > 1 && <span className="w-[34px]" />}
+              </div>
+
+              <div className="mt-1 space-y-2">
                 {employees.map((e, i) => (
                   <div key={i} className="flex w-[100%] gap-2">
                     <input
@@ -134,7 +145,7 @@ export default function NewPayrollPage() {
                       className="w-[20%] rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm outline-none focus:border-[var(--primary)]"
                     />
                     <input
-                      value={e.times}
+                      value={e.times ?? ""}
                       onChange={(ev) => { updateEmployee(i, "times", ev.target.value); clearDone(); }}
                       placeholder="∞"
                       inputMode="numeric"

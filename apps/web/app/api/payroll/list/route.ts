@@ -13,7 +13,7 @@ export async function GET(req: Request) {
 
     const { data: payrolls, error } = await supabase
       .from("payrolls")
-      .select("id, name, period_seconds, token_mint, created_at, hidden, payroll_items(id, employee_wallet, amount, status, plan_pda, subscription_pda, next_payment_at, last_payment_at, payroll_history(amount, fee, status, salary_tx, paid_at))")
+      .select("id, name, period_seconds, token_mint, created_at, hidden, payroll_items(id, employee_wallet, amount, status, plan_pda, subscription_pda, next_payment_at, last_payment_at, max_payments, payroll_history(amount, fee, status, salary_tx, paid_at))")
       .eq("employer_wallet", wallet)
       .order("created_at", { ascending: false });
 

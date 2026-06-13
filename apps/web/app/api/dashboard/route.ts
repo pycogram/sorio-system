@@ -16,15 +16,31 @@ export async function GET(req: NextRequest) {
   // --- Customer view: subscriptions where THIS wallet is the subscriber ---
   const { data: mySubsRaw } = await db
     .from("subscriptions")
-    .select("id, subscription_pda, status, next_collection_at, plan_id, plans(plan_pda, name, amount, merchant_amount, period_seconds, merchants(name))")
+    .select("id, subscription_pda, status, next_collection_at, max_payments, plan_id, plans(plan_pda, name, amount, merchant_amount, period_seconds, merchants(name))")
     .eq("subscriber_wallet", wallet)
     .order("subscribed_at", { ascending: false });
+
+  // Count successful payments per subscription (for "X of N payments" progress).
+  const mySubIds = (mySubsRaw ?? []).map((s: any) => s.id);
+  const paidCountBySub = new Map<string, number>();
+  if (mySubIds.length) {
+    const { data: payRows } = await db
+      .from("billing_history")
+      .select("subscription_id, status")
+      .in("subscription_id", mySubIds)
+      .eq("status", "success");
+    for (const row of payRows ?? []) {
+      paidCountBySub.set(row.subscription_id, (paidCountBySub.get(row.subscription_id) ?? 0) + 1);
+    }
+  }
 
   const mySubscriptions = (mySubsRaw ?? []).map((s: any) => ({
     id: s.id,
     subscription_pda: s.subscription_pda,
     status: s.status,
     next_collection_at: s.next_collection_at,
+    max_payments: s.max_payments ?? null,
+    payments_made: paidCountBySub.get(s.id) ?? 0,
     plan_pda: s.plans?.plan_pda ?? null,
     plan_name: s.plans?.name ?? "Plan",
     amount: s.plans?.amount ?? 0,

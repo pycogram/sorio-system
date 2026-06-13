@@ -18,6 +18,7 @@ type Item = {
   subscription_pda: string | null;
   next_payment_at: string | null;
   last_payment_at: string | null;
+  max_payments: number | null;
   payroll_history: HistoryRow[];
 };
 type Payroll = { id: string; name: string; period_seconds: number; hidden: boolean; payroll_items: Item[] };
@@ -207,10 +208,17 @@ export function PayrollsOwned() {
                           <div key={i.id} className="flex items-center justify-between rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm">
                             <div className="flex flex-col">
                               <span className="font-mono text-[var(--muted)]">{short(i.employee_wallet)}</span>
-                              {paidCount > 0 && (
+                              {i.max_payments != null ? (
                                 <span className="mt-0.5 text-xs text-[var(--muted)]">
-                                  {paidCount} paid · last {fmtDate(lastPaid?.paid_at ?? null)}
+                                  {paidCount} of {i.max_payments} payments
+                                  {paidCount >= i.max_payments ? " · complete" : ` · ${i.max_payments - paidCount} left`}
                                 </span>
+                              ) : (
+                                paidCount > 0 && (
+                                  <span className="mt-0.5 text-xs text-[var(--muted)]">
+                                    {paidCount} paid · last {fmtDate(lastPaid?.paid_at ?? null)}
+                                  </span>
+                                )
                               )}
                             </div>
                             <span>{usd(i.amount)} / {period}</span>

@@ -11,6 +11,8 @@ type MySubscription = {
   subscription_pda: string;
   status: string;
   next_collection_at: string | null;
+  max_payments: number | null;
+  payments_made: number;
   plan_pda: string | null;
   plan_name: string;
   amount: number;
@@ -97,6 +99,14 @@ export function SubscriptionsMine() {
                       {usd(s.amount)} / {period} ·{" "}
                       {s.status === "active" ? `next ${fmtDate(s.next_collection_at)}` : s.status}
                     </p>
+                    {s.max_payments != null && (
+                      <p className="mt-1 text-xs text-[var(--muted)]">
+                        {s.payments_made} of {s.max_payments} payments
+                        {s.status === "completed" || s.payments_made >= s.max_payments
+                          ? " · complete"
+                          : ` · ${s.max_payments - s.payments_made} left`}
+                      </p>
+                    )}
                   </div>
                   {s.status === "active" ? (
                     <button
