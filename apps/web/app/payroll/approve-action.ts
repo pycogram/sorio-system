@@ -20,16 +20,12 @@ import {
   fetchPlan,
 } from "@solana/subscriptions";
 import { findAssociatedTokenPda } from "@solana-program/token";
+import { getProvider } from "../providers";
 
 const USDC_MINT = address("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 const TOKEN_PROGRAM = address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 const PLATFORM_OWNER = address("FPaUQV5MmDdXBTTH4pRo1C2zX7UvnC7kD1rc4VNwdFN2");
 const RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
-
-function getProvider(): any {
-  const w = window as any;
-  return w.phantom?.solana ?? w.solana;
-}
 
 function makePhantomSigner() {
   const provider = getProvider();

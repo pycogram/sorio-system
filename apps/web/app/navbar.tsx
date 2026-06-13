@@ -1,27 +1,11 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
 import { useWallet, useTheme } from "./providers";
 export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { address, connect, disconnect } = useWallet();
   const { theme, toggle } = useTheme();
-  const [connecting, setConnecting] = useState(false);
   const short = address ? `${address.slice(0, 4)}…${address.slice(-4)}` : null;
-
-  async function handleClick() {
-    if (address) {
-      await disconnect();
-      return;
-    }
-    setConnecting(true);
-    try {
-      await connect();
-    } finally {
-      setConnecting(false);
-    }
-  }
-
   return (
     <nav className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between bg-[var(--background)] px-4 md:px-8 py-5 border-b border-[var(--border)] md:static md:z-auto">
       <Link href="/dashboard" className="flex items-center gap-2">
@@ -30,11 +14,10 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
       </Link>
       <div className="flex items-center gap-4">
         <button
-          onClick={handleClick}
-          disabled={connecting}
-          className="rounded-lg border border-[var(--border)] px-4 py-1.5 text-sm font-medium transition hover:border-[var(--foreground)] disabled:opacity-60"
+          onClick={() => (address ? disconnect() : connect())}
+          className="rounded-lg border border-[var(--border)] px-4 py-1.5 text-sm font-medium transition hover:border-[var(--foreground)]"
         >
-          {connecting ? "Connecting…" : short ?? "Connect Wallet"}
+          {short ?? "Connect Wallet"}
         </button>
         <button
           onClick={toggle}
