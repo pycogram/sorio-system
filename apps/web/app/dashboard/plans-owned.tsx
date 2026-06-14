@@ -11,6 +11,9 @@ type Subscriber = {
   status: string;
   next_collection_at: string | null;
   last_collection_at: string | null;
+  max_payments: number | null;
+  payments_made: number;
+  received: number;
 };
 type Plan = {
   id: string;
@@ -137,7 +140,17 @@ export function PlansOwned() {
             <div className="mt-2 space-y-1">
               {p.subscribers.slice(0, 3).map((s) => (
                 <div key={s.id} className="flex items-center justify-between text-sm">
-                  <span className="font-mono text-[var(--muted)]">{short(s.subscriber_wallet)}</span>
+                  <div className="flex flex-col">
+                    <span className="font-mono text-[var(--muted)]">{short(s.subscriber_wallet)}</span>
+                    <span className="mt-0.5 text-xs text-[var(--muted)]">
+                      {usd(s.received)} received
+                      {s.max_payments != null && (
+                        <> · {s.payments_made} of {s.max_payments}
+                          {s.payments_made >= s.max_payments ? " · complete" : ` · ${s.max_payments - s.payments_made} left`}
+                        </>
+                      )}
+                    </span>
+                  </div>
                   <span className="text-[var(--muted)]">next: {fmtDate(s.next_collection_at)}</span>
                 </div>
               ))}

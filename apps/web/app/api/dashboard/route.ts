@@ -23,14 +23,16 @@ export async function GET(req: NextRequest) {
   // Count successful payments per subscription (for "X of N payments" progress).
   const mySubIds = (mySubsRaw ?? []).map((s: any) => s.id);
   const paidCountBySub = new Map<string, number>();
+  const paidAmountBySub = new Map<string, number>();
   if (mySubIds.length) {
     const { data: payRows } = await db
       .from("billing_history")
-      .select("subscription_id, status")
+      .select("subscription_id, status, amount")
       .in("subscription_id", mySubIds)
       .eq("status", "success");
     for (const row of payRows ?? []) {
       paidCountBySub.set(row.subscription_id, (paidCountBySub.get(row.subscription_id) ?? 0) + 1);
+      paidAmountBySub.set(row.subscription_id, (paidAmountBySub.get(row.subscription_id) ?? 0) + (row.amount ?? 0));
     }
   }
 
@@ -41,6 +43,7 @@ export async function GET(req: NextRequest) {
     next_collection_at: s.next_collection_at,
     max_payments: s.max_payments ?? null,
     payments_made: paidCountBySub.get(s.id) ?? 0,
+    total_paid: paidAmountBySub.get(s.id) ?? 0,
     plan_pda: s.plans?.plan_pda ?? null,
     plan_name: s.plans?.name ?? "Plan",
     amount: s.plans?.amount ?? 0,
@@ -77,7 +80,7 @@ export async function GET(req: NextRequest) {
   const { data: subs } = planIds.length
     ? await db
         .from("subscriptions")
-        .select("id, plan_id, subscriber_wallet, status, next_collection_at, last_collection_at")
+        .select("id, plan_id, subscriber_wallet, status, next_collection_at, last_collection_at, max_payments")
         .in("plan_id", planIds)
     : { data: [] as any[] };
 
@@ -101,10 +104,30 @@ export async function GET(req: NextRequest) {
     if (plan) totalRevenue += plan.merchant_amount ?? plan.amount;
   }
 
-  const plansWithSubs = (plans ?? []).map((p) => ({
-    ...p,
-    subscribers: (subs ?? []).filter((s) => s.plan_id === p.id),
-  }));
+  // Per-subscriber successful payment counts (from already-fetched payments).
+  const successCountBySub = new Map<string, number>();
+  for (const pay of payments ?? []) {
+    if (pay.status === "success") {
+      successCountBySub.set(pay.subscription_id, (successCountBySub.get(pay.subscription_id) ?? 0) + 1);
+    }
+  }
+
+  const plansWithSubs = (plans ?? []).map((p) => {
+    const share = p.merchant_amount ?? p.amount;
+    return {
+      ...p,
+      subscribers: (subs ?? [])
+        .filter((s) => s.plan_id === p.id)
+        .map((s) => {
+          const count = successCountBySub.get(s.id) ?? 0;
+          return {
+            ...s,
+            payments_made: count,
+            received: count * share, // merchant's share per successful payment
+          };
+        }),
+    };
+  });
 
   return NextResponse.json({
     merchant,
