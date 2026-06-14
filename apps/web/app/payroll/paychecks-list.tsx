@@ -38,7 +38,7 @@ export function PaychecksList() {
       {!address && <p className="mt-8 text-[var(--muted)]">Connect your wallet to see payments you receive.</p>}
       {address && loading && <p className="mt-8 text-[var(--muted)]">Loading…</p>}
       {address && received && received.length === 0 && (
-        <p className="mt-8 text-[var(--muted)]">No one is paying you through Paylo yet.</p>
+        <p className="mt-8 text-[var(--muted)]">No one is paying you through Sorio yet.</p>
       )}
 
       {address && received && received.length > 0 && (

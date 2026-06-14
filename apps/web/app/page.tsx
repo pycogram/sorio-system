@@ -102,8 +102,8 @@ export default function Home() {
       {/* Header */}
       <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-8 py-5">
         <div className="flex items-center gap-2">
-          <Image src="/z-paylo-logo.png" alt="Paylo" width={30} height={30} className="rounded-lg" />
-          <span className="text-lg font-semibold tracking-tight">Paylo</span>
+          <Image src="/z-paylo-logo.png" alt="Sorio" width={30} height={30} className="rounded-lg" />
+          <span className="text-lg font-semibold tracking-tight">Sorio</span>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -200,8 +200,8 @@ export default function Home() {
       {/* Feature strip */}
       <section className="relative z-10 border-y border-[var(--border)] bg-[var(--subtle)]">
         <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-8 py-14 sm:grid-cols-3">
-          <Reveal delay={0}><Feature title="Non-custodial" body="Funds move straight from payer to recipient on-chain. Paylo never holds your money." /></Reveal>
-          <Reveal delay={100}><Feature title="You stay in control" body="The approved amount is a hard on-chain ceiling. Paylo can never take more, cancel anytime." /></Reveal>
+          <Reveal delay={0}><Feature title="Non-custodial" body="Funds move straight from payer to recipient on-chain. Sorio never holds your money." /></Reveal>
+          <Reveal delay={100}><Feature title="You stay in control" body="The approved amount is a hard on-chain ceiling. Sorio can never take more, cancel anytime." /></Reveal>
           <Reveal delay={200}><Feature title="Approve once" body="No re-signing every cycle. One wallet approval authorizes the recurring payment. Done." /></Reveal>
         </div>
       </section>
@@ -215,9 +215,9 @@ export default function Home() {
           </p>
         </Reveal>
         <div className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-3">
-          <Reveal delay={0}><ProductCard name="Paylo Scribe" tag="Live" tagLive body="Subscriptions for merchants. Create plans, share a link, get paid automatically. Customers subscribe and cancel anytime." /></Reveal>
-          <Reveal delay={100}><ProductCard name="Paylo Roll" tag="Live" tagLive body="Payroll on the same rail. Pay employees and contractors on a recurring schedule, in stablecoins, on-chain." /></Reveal>
-          <Reveal delay={200}><ProductCard name="Paylo API" tag="Coming soon" body="Infrastructure for builders. Integrate Paylo's recurring-payment rail directly into your own product." /></Reveal>
+          <Reveal delay={0}><ProductCard name="Sorio Scribe" tag="Live" tagLive body="Subscriptions for merchants. Create plans, share a link, get paid automatically. Customers subscribe and cancel anytime." /></Reveal>
+          <Reveal delay={100}><ProductCard name="Sorio Roll" tag="Live" tagLive body="Payroll on the same rail. Pay employees and contractors on a recurring schedule, in stablecoins, on-chain." /></Reveal>
+          <Reveal delay={200}><ProductCard name="Sorio API" tag="Coming soon" body="Infrastructure for builders. Integrate Sorio's recurring-payment rail directly into your own product." /></Reveal>
         </div>
       </section>
 
@@ -227,7 +227,7 @@ export default function Home() {
           <Reveal>
             <h2 className="text-center text-4xl font-semibold tracking-tight">Two sides, one flow.</h2>
             <p className="mx-auto mt-3 max-w-xl text-center text-[var(--muted)]">
-              Every Paylo product connects two people: one sets the terms, the other approves once.
+              Every Sorio product connects two people: one sets the terms, the other approves once.
               After that, payment moves on its own each cycle.
             </p>
           </Reveal>
@@ -330,7 +330,7 @@ export default function Home() {
                 Give your AI agent<br />a wallet it can&apos;t abuse.
               </h2>
               <p className="mt-5 max-w-md text-[var(--muted)]">
-                Paylo&apos;s delegation model is built for autonomous payments. Authorize an agent to pay
+                Sorio&apos;s delegation model is built for autonomous payments. Authorize an agent to pay
                 for subscriptions, APIs, or services on a recurring basis within a hard, on-chain
                 spending limit it can never exceed. Revoke anytime.
               </p>
@@ -378,16 +378,16 @@ export default function Home() {
       <section className="relative z-10 border-t border-[var(--border)]">
         <div className="mx-auto max-w-6xl px-8 py-24">
           <Reveal>
-            <h2 className="text-center text-4xl font-semibold tracking-tight">See Paylo in action</h2>
+            <h2 className="text-center text-4xl font-semibold tracking-tight">See Sorio in action</h2>
             <p className="mx-auto mt-3 max-w-xl text-center text-[var(--muted)]">
               From creating a plan to autonomous agent payments.
             </p>
           </Reveal>
           <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-2">
-            <Reveal delay={0}><GalleryItem src="/image1.png" caption="Create a plan and share a link" /></Reveal>
-            <Reveal delay={100}><GalleryItem src="/image2.png" caption="Approve once, on-chain" /></Reveal>
-            <Reveal delay={150}><GalleryItem src="/image3.png" caption="Collected automatically every cycle" /></Reveal>
-            <Reveal delay={200}><GalleryItem src="/image4.png" caption="Give an AI agent a bounded budget" /></Reveal>
+            <Reveal delay={0}><GalleryItem src="/image10.png" caption="Create a plan and share a link" /></Reveal>
+            <Reveal delay={100}><GalleryItem src="/image20.png" caption="Approve once, on-chain" /></Reveal>
+            <Reveal delay={150}><GalleryItem src="/image30.png" caption="Collected automatically every cycle" /></Reveal>
+            <Reveal delay={200}><GalleryItem src="/image40.png" caption="Give an AI agent a bounded budget" /></Reveal>
           </div>
         </div>
       </section>
@@ -402,7 +402,7 @@ export default function Home() {
               </h2>
               <p className="mt-5 max-w-md text-[var(--muted)]">
                 Every payment is authorized by the customer's own wallet and enforced by Solana's
-                audited Subscriptions Delegation Program. Paylo can never pull more than approved,
+                audited Subscriptions Delegation Program. Sorio can never pull more than approved,
                 and funds never touch our hands.
               </p>
               <div className="mt-8 space-y-3">
@@ -452,8 +452,8 @@ export default function Home() {
             {/* Brand column */}
             <div className="col-span-2">
               <div className="flex items-center gap-2">
-                <Image src="/z-paylo-logo.png" alt="Paylo" width={28} height={28} className="rounded-lg" />
-                <span className="text-lg font-semibold tracking-tight">Paylo</span>
+                <Image src="/z-paylo-logo.png" alt="Sorio" width={28} height={28} className="rounded-lg" />
+                <span className="text-lg font-semibold tracking-tight">Sorio</span>
               </div>
               <p className="mt-4 max-w-xs text-sm text-[var(--muted)]">
                 Recurring payments and payroll on Solana. Approve once, get paid on repeat.
@@ -469,9 +469,9 @@ export default function Home() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Products</p>
               <ul className="mt-4 space-y-3 text-sm">
-                <li><a href="/plans" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Paylo Scribe</a></li>
-                <li><a href="/payroll" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Paylo Roll</a></li>
-                <li><span className="text-[var(--muted)] opacity-60">Paylo API</span> <span className="ml-1 text-[10px] text-[var(--muted)]">soon</span></li>
+                <li><a href="/plans" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Sorio Scribe</a></li>
+                <li><a href="/payroll" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Sorio Roll</a></li>
+                <li><span className="text-[var(--muted)] opacity-60">Sorio API</span> <span className="ml-1 text-[10px] text-[var(--muted)]">soon</span></li>
               </ul>
             </div>
 
@@ -498,7 +498,7 @@ export default function Home() {
 
           {/* Bottom bar */}
           <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-[var(--border)] pt-8 text-sm text-[var(--muted)] sm:flex-row">
-            <p>© {new Date().getFullYear()} Paylo. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} Sorio. All rights reserved.</p>
             <p>Built on the Solana Foundation Subscriptions Delegation Program</p>
           </div>
         </div>

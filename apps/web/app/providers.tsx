@@ -80,11 +80,12 @@ function isMobile() {
 type WalletCtx = {
   address: string | null;
   connect: () => void;
+  switchWallet: () => Promise<void>;
   disconnect: () => Promise<void>;
 };
 type ThemeCtx = { theme: "light" | "dark"; toggle: () => void };
 
-const WalletContext = createContext<WalletCtx>({ address: null, connect: () => {}, disconnect: async () => {} });
+const WalletContext = createContext<WalletCtx>({ address: null, connect: () => {}, switchWallet: async () => {}, disconnect: async () => {} });
 const ThemeContext = createContext<ThemeCtx>({ theme: "light", toggle: () => {} });
 
 export function useWallet() { return useContext(WalletContext); }
@@ -200,11 +201,23 @@ export function Providers({
     setAddress(null);
   }, []);
 
+  // Switch wallet: disconnect the current one, clear the saved choice, and
+  // reopen the picker so the user can choose a different wallet.
+  const switchWallet = useCallback(async () => {
+    const p = getProvider();
+    if (p) {
+      try { await p.disconnect(); } catch { /* ignore */ }
+    }
+    clearSelectedWallet();
+    setAddress(null);
+    setPickerOpen(true);
+  }, []);
+
   const toggle = useCallback(() => setTheme((t) => (t === "light" ? "dark" : "light")), []);
 
   return (
     <ThemeContext.Provider value={{ theme, toggle }}>
-      <WalletContext.Provider value={{ address, connect, disconnect }}>
+      <WalletContext.Provider value={{ address, connect, switchWallet, disconnect }}>
         {children}
         {pickerOpen && <WalletPicker onPick={connectTo} onClose={() => setPickerOpen(false)} />}
       </WalletContext.Provider>

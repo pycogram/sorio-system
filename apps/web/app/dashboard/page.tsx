@@ -85,7 +85,7 @@ export default function Dashboard() {
   return (
     <AppShell>
       <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
-      <p className="mt-2 text-[var(--muted)]">Your Paylo activity at a glance.</p>
+      <p className="mt-2 text-[var(--muted)]">Your Sorio activity at a glance.</p>
 
       {!address && <p className="mt-8 text-[var(--muted)]">Connect your wallet to get started.</p>}
       {address && loading && <p className="mt-8 text-[var(--muted)]">Loading…</p>}

@@ -189,7 +189,7 @@ export default {
       }
     }
 
-    // ===== PAYROLL (Paylo Roll) =====
+    // ===== PAYROLL (Sorio Roll) =====
     const FEE_PERCENT = 2;
 
     const { data: payrolls, error: pErr } = await db
