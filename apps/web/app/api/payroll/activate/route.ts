@@ -3,7 +3,7 @@ import { createClient as createDb } from "@supabase/supabase-js";
 
 export async function POST(req: Request) {
   try {
-    const { itemId, subscriptionPda, wallet } = await req.json();
+    const { itemId, subscriptionPda, wallet, startDate } = await req.json();
     if (!itemId || !subscriptionPda) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
@@ -27,9 +27,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "not authorized" }, { status: 403 });
     }
 
+    // next_payment_at controls when the worker first pays this employee:
+    //  - startDate provided  -> first payment on that date (then every period)
+    //  - no startDate         -> due now (worker pays on its next run, or the
+    //                            "pay now" flow charges immediately)
+    const nextPaymentAt = startDate ? new Date(startDate).toISOString() : new Date().toISOString();
+
     const { error } = await db
       .from("payroll_items")
-      .update({ subscription_pda: subscriptionPda, status: "active" })
+      .update({
+        subscription_pda: subscriptionPda,
+        status: "active",
+        next_payment_at: nextPaymentAt,
+      })
       .eq("id", itemId);
 
     if (error) throw error;

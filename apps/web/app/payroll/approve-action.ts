@@ -21,11 +21,11 @@ import {
 } from "@solana/subscriptions";
 import { findAssociatedTokenPda } from "@solana-program/token";
 import { getProvider } from "../providers";
+import { USDC_MINT_ADDRESS, RPC_URL } from "../lib/config";
 
-const USDC_MINT = address("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+const USDC_MINT = address(USDC_MINT_ADDRESS);
 const TOKEN_PROGRAM = address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 const PLATFORM_OWNER = address("FPaUQV5MmDdXBTTH4pRo1C2zX7UvnC7kD1rc4VNwdFN2");
-const RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
 
 function makePhantomSigner() {
   const provider = getProvider();
@@ -76,7 +76,14 @@ async function waitForConfirm(rpc: any, sigStr: string) {
   }
 }
 
-export async function runApproveEmployee(opts: { itemId: string }) {
+// Approve an employee. The payroll's start policy drives the first payment:
+//   startMode = "pay_now" -> charge the first salary immediately on approval
+//   startMode = "date"    -> first payment scheduled for startDate (no charge now)
+export async function runApproveEmployee(opts: {
+  itemId: string;
+  startMode: "pay_now" | "date";
+  startDate?: string | null;
+}) {
   const signer = makePhantomSigner();
   const rpc = createSolanaRpc(RPC_URL);
   const employerAddr = signer.address;
@@ -103,8 +110,6 @@ export async function runApproveEmployee(opts: { itemId: string }) {
     userAta,
     tokenProgram: TOKEN_PROGRAM,
   });
-
-  // init may already exist from a prior employee — tolerate failure.
   try {
     const initSig = await sendIx(rpc, signer, initIx);
     await waitForConfirm(rpc, initSig);
@@ -137,18 +142,40 @@ export async function runApproveEmployee(opts: { itemId: string }) {
     },
   });
   const subSig = await sendIx(rpc, signer, subscribeIx);
+  await waitForConfirm(rpc, subSig);
 
   const [subscriptionPda] = await findSubscriptionDelegationPda({
     planPda,
     subscriber: employerAddr,
   });
 
-  // 4. Mark the item active + save the subscription PDA.
+  // 4. Activate the item. For "date" mode, pass the start date so the worker
+  //    pays on that date. For "pay_now", leave it due-now and charge below.
   await fetch("/api/payroll/activate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ itemId: opts.itemId, subscriptionPda, wallet: employerAddr }),
+    body: JSON.stringify({
+      itemId: opts.itemId,
+      subscriptionPda,
+      wallet: employerAddr,
+      startDate: opts.startMode === "date" ? (opts.startDate ?? null) : null,
+    }),
   });
 
-  return { signature: subSig, subscriptionPda };
+  // 5. "Pay now": charge the first salary immediately (best-effort).
+  let firstPay: any = null;
+  if (opts.startMode === "pay_now") {
+    try {
+      const cRes = await fetch("/api/payroll/collect-first", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId: opts.itemId, wallet: employerAddr }),
+      });
+      firstPay = await cRes.json().catch(() => null);
+    } catch {
+      /* non-fatal — worker pays on its next run */
+    }
+  }
+
+  return { signature: subSig, subscriptionPda, firstPay };
 }

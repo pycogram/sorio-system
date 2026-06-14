@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient as createDb } from "@supabase/supabase-js";
 
-const DEVNET_USDC = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
+import { USDC_MINT_ADDRESS } from "../../../lib/config";
+const TOKEN_MINT = USDC_MINT_ADDRESS;
 
 export async function POST(req: Request) {
   try {
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
         employer_wallet: employerWallet,
         name,
         period_seconds: periodSeconds,
-        token_mint: DEVNET_USDC,
+        token_mint: TOKEN_MINT,
       })
       .select()
       .single();

@@ -21,7 +21,15 @@ type Item = {
   max_payments: number | null;
   payroll_history: HistoryRow[];
 };
-type Payroll = { id: string; name: string; period_seconds: number; hidden: boolean; payroll_items: Item[] };
+type Payroll = {
+  id: string;
+  name: string;
+  period_seconds: number;
+  hidden: boolean;
+  start_mode: "pay_now" | "date" | null;
+  start_date: string | null;
+  payroll_items: Item[];
+};
 
 const usd = (n: number) => `$${(n / 1_000_000).toFixed(2)}`;
 const periodLabel = (s: number) =>
@@ -30,6 +38,12 @@ const periodLabel = (s: number) =>
 const short = (w: string) => `${w.slice(0, 4)}…${w.slice(-4)}`;
 const fmtDate = (d: string | null) =>
   d ? new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—";
+
+// Has any successful payment been made on this payroll? If so, the start
+// setting is locked.
+function payrollHasPaid(p: Payroll): boolean {
+  return p.payroll_items.some((i) => (i.payroll_history ?? []).some((h) => h.status === "success"));
+}
 
 export function PayrollsOwned() {
   const { address } = useWallet();
@@ -50,10 +64,15 @@ export function PayrollsOwned() {
     await mutate();
   }
 
-  async function handleApprove(itemId: string) {
-    setApproving(itemId);
+  async function handleApprove(item: Item, p: Payroll) {
+    if (!p.start_mode) return; // guarded by UI, but double-check
+    setApproving(item.id);
     try {
-      await runApproveEmployee({ itemId });
+      await runApproveEmployee({
+        itemId: item.id,
+        startMode: p.start_mode,
+        startDate: p.start_date,
+      });
       await refresh();
     } catch (e: any) {
       const msg = e?.message ?? "";
@@ -71,13 +90,11 @@ export function PayrollsOwned() {
     setRemoving(item.id);
     try {
       await runCancel({ planPda: item.plan_pda, subscriptionPda: item.subscription_pda });
-      
       await fetch("/api/payroll/remove", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ itemId: item.id, wallet: address }),
       });
-      
       await refresh();
     } catch (e: any) {
       if (e?.message !== "USER_CANCELLED") {
@@ -168,6 +185,8 @@ export function PayrollsOwned() {
               const total = p.payroll_items.reduce((s, i) => s + i.amount, 0);
               const removedCount = p.payroll_items.filter((i) => i.status === "removed").length;
               const hiding = hidingId === p.id;
+              const locked = payrollHasPaid(p);
+              const needsChoice = !p.start_mode;
               return (
                 <div
                   key={p.id}
@@ -195,6 +214,9 @@ export function PayrollsOwned() {
                       {hiding ? "…" : p.hidden ? "Unhide" : "Hide"}
                     </button>
                   </div>
+
+                  {/* Start-setting panel */}
+                  <StartSetting payroll={p} locked={locked} onSaved={refresh} walletAddr={address!} />
 
                   <div className="mt-4 space-y-2">
                     {p.payroll_items
@@ -235,11 +257,14 @@ export function PayrollsOwned() {
                               </div>
                             ) : i.status === "removed" ? (
                               <span className="text-xs text-[var(--muted)]">removed</span>
+                            ) : i.status === "completed" ? (
+                              <span className="text-xs text-[var(--muted)]">completed</span>
                             ) : (
                               <button
-                                onClick={() => handleApprove(i.id)}
-                                disabled={approving === i.id}
-                                className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs transition hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                                onClick={() => handleApprove(i, p)}
+                                disabled={approving === i.id || needsChoice}
+                                title={needsChoice ? "Choose when payments start first" : ""}
+                                className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs transition hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-40 disabled:cursor-not-allowed"
                               >
                                 {approving === i.id ? "Approving…" : "Approve"}
                               </button>
@@ -248,6 +273,12 @@ export function PayrollsOwned() {
                         );
                       })}
                   </div>
+
+                  {needsChoice && (
+                    <p className="mt-3 flex items-center gap-1.5 text-xs text-[var(--muted)]">
+                      Approve is locked until you choose when payments start.
+                    </p>
+                  )}
 
                   {removedCount > 0 && (
                     <button
@@ -284,6 +315,114 @@ export function PayrollsOwned() {
           )}
         </>
       )}
+    </div>
+  );
+}
+
+function StartSetting({
+  payroll,
+  locked,
+  onSaved,
+  walletAddr,
+}: {
+  payroll: Payroll;
+  locked: boolean;
+  onSaved: () => void;
+  walletAddr: string;
+}) {
+  const [mode, setMode] = useState<"pay_now" | "date">(payroll.start_mode ?? "pay_now");
+  const [date, setDate] = useState(payroll.start_date ? payroll.start_date.split("T")[0] : "");
+  const [saving, setSaving] = useState(false);
+  const today = new Date().toISOString().split("T")[0];
+
+  // Locked (payment already made): show the chosen setting read-only.
+  if (locked) {
+    return (
+      <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--subtle)] px-4 py-3 text-sm">
+        <span className="text-[var(--muted)]">First payment: </span>
+        {payroll.start_mode === "date" && payroll.start_date
+          ? `starts ${new Date(payroll.start_date).toLocaleDateString()}`
+          : "paid on approval"}
+        <span className="ml-2 text-xs text-[var(--muted)]">locked</span>
+      </div>
+    );
+  }
+
+  const canSave = mode === "pay_now" || (mode === "date" && !!date);
+
+  async function save() {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/payroll/${payroll.id}/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wallet: walletAddr,
+          mode,
+          startDate: mode === "date" ? date : null,
+        }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error ?? "Failed to save");
+      }
+      await onSaved();
+    } catch (e: any) {
+      alert(e?.message ?? "Could not save start setting.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--subtle)] p-3">
+      <div className="mb-2.5 flex items-center gap-2">
+        <span className="text-sm font-medium">When do payments start?</span>
+        {!payroll.start_mode && (
+          <span className="rounded-md bg-red-500/10 px-2 py-0.5 text-[11px] text-red-500">Required</span>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => setMode("pay_now")}
+          className={`rounded-lg border px-3.5 py-1.5 text-sm transition ${
+            mode === "pay_now"
+              ? "border-[var(--primary)] text-[var(--primary)]"
+              : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--foreground)]"
+          }`}
+        >
+          Pay now
+        </button>
+        <button
+          onClick={() => setMode("date")}
+          className={`rounded-lg border px-3.5 py-1.5 text-sm transition ${
+            mode === "date"
+              ? "border-[var(--primary)] text-[var(--primary)]"
+              : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--foreground)]"
+          }`}
+        >
+          Start on date
+        </button>
+        {mode === "date" && (
+          <input
+            type="date"
+            min={today}
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-1.5 text-sm outline-none focus:border-[var(--primary)]"
+          />
+        )}
+        <button
+          onClick={save}
+          disabled={!canSave || saving}
+          className="ml-auto rounded-lg bg-[var(--btn)] px-4 py-1.5 text-sm font-medium text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)] disabled:opacity-40"
+        >
+          {saving ? "Saving…" : "Save"}
+        </button>
+      </div>
+      <p className="mt-2.5 text-xs text-[var(--muted)]">
+        Set this before approving anyone. You can change it until the first payment is made.
+      </p>
     </div>
   );
 }
