@@ -3,6 +3,7 @@ import { address } from "@solana/kit";
 import {
   makeClient,
   collectPayment,
+  ensureMerchantAta,
   findAssociatedTokenPda,
   TOKEN_PROGRAM,
 } from "../../../packages/solana/src/index.js";
@@ -44,16 +45,31 @@ export default {
     }
 
     console.log(`cron ${event.cron}: ${due?.length ?? 0} due`);
-    if (!due || due.length === 0) {
-      console.log("nothing to collect");
-      return;
-    }
 
     // Build the puller client once (collector key from env secret).
     const pullerBytes = new Uint8Array(JSON.parse(env.PULLER_SECRET));
     const { client, signer: puller } = await makeClient(pullerBytes, env.SOLANA_RPC_URL);
 
-    for (const sub of due) {
+    // Ensure the platform fee wallet's USDC token account exists before any fee
+    // pull. Idempotent (no-op if it already exists); self-heals if the fee
+    // wallet ever changes. Mint comes from the first due subscription's plan.
+    if (due && due.length > 0) {
+      const firstMint = (due[0].plans as any)?.token_mint;
+      if (firstMint) {
+        try {
+          await ensureMerchantAta(puller, address(env.PLATFORM_FEE_WALLET), address(firstMint));
+          console.log("   fee wallet ATA ensured");
+        } catch (e: any) {
+          console.log("   ensure fee ATA (non-fatal):", e?.message ?? e);
+        }
+      }
+    }
+
+    if (!due || due.length === 0) {
+      console.log("no subscriptions due");
+    }
+
+    for (const sub of due ?? []) {
       const plan: any = sub.plans;
 
       const destWallet = plan.merchants?.destination_wallet;
@@ -65,8 +81,7 @@ export default {
 
       // Payment-limit check: if this subscription has a max_payments cap,
       // count how many successful collections it already has. If it has
-      // already reached the cap, mark it completed and skip (defensive —
-      // it should have been completed on the prior run).
+      // already reached the cap, mark it completed and skip.
       if (sub.max_payments != null) {
         const { count: successCount } = await db
           .from("billing_history")
@@ -216,6 +231,13 @@ export default {
           payableItems.push(i);
         }
         if (payableItems.length === 0) continue;
+
+        // Ensure the fee wallet ATA for this payroll's mint too (idempotent).
+        try {
+          await ensureMerchantAta(puller, address(env.PLATFORM_FEE_WALLET), address(mint));
+        } catch (e: any) {
+          console.log(`   payroll ${pr.id} ensure fee ATA (non-fatal):`, e?.message ?? e);
+        }
 
         // Compute total needed for this payroll run (all salaries + all fees).
         let totalNeeded = 0n;
