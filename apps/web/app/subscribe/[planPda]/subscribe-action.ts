@@ -21,10 +21,10 @@ import {
 } from "@solana/subscriptions";
 import { findAssociatedTokenPda } from "@solana-program/token";
 import { getProvider } from "../../providers";
+import { USDC_MINT_ADDRESS, RPC_URL } from "../../lib/config";
 
-const USDC_MINT = address("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+const USDC_MINT = address(USDC_MINT_ADDRESS);
 const TOKEN_PROGRAM = address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
-const RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
 
 function makePhantomSigner() {
   const provider = getProvider();
@@ -131,6 +131,10 @@ export async function runSubscribe(opts: {
   });
   const subSig = await sendIx(rpc, signer, subscribeIx);
 
+  // Wait for the subscribe transaction to confirm on-chain before the first
+  // charge — the puller can't collect against an unconfirmed subscription.
+  await waitForConfirm(rpc, subSig);
+
   // Derive the subscription delegation PDA (what the worker collects against).
   const [subscriptionPda] = await findSubscriptionDelegationPda({
     planPda,
@@ -138,7 +142,7 @@ export async function runSubscribe(opts: {
   });
 
   // Save to Supabase so the collection worker can find it.
-  await fetch("/api/subscribe", {
+  const saveRes = await fetch("/api/subscribe", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -148,6 +152,23 @@ export async function runSubscribe(opts: {
       maxPayments: opts.maxPayments ?? null,
     }),
   });
+  const saveData = await saveRes.json().catch(() => ({}));
 
-  return { signature: subSig, subscriptionPda };
+  // Best-effort: charge the first payment immediately so the customer sees it
+  // work right away. If it fails, the worker collects on its next run.
+  let firstCharge: { collected: boolean; signature?: string } | null = null;
+  if (saveData?.subscriptionId) {
+    try {
+      const cRes = await fetch("/api/collect-first", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscriptionId: saveData.subscriptionId }),
+      });
+      firstCharge = await cRes.json().catch(() => null);
+    } catch {
+      /* non-fatal — worker will collect */
+    }
+  }
+
+  return { signature: subSig, subscriptionPda, firstCharge };
 }
