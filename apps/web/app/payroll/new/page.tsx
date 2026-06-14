@@ -71,6 +71,7 @@ export default function NewPayrollPage() {
       setPeriod(2592000);
       setEmployees([{ wallet: "", amount: "", times: "" }]);
     } catch (e: any) {
+      if (e?.message === "USER_CANCELLED") return;
       alert("Failed: " + (e?.message ?? e));
     } finally {
       setSaving(false);

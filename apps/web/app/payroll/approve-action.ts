@@ -22,6 +22,7 @@ import {
 import { findAssociatedTokenPda } from "@solana-program/token";
 import { getProvider } from "../providers";
 import { USDC_MINT_ADDRESS, RPC_URL } from "../lib/config";
+import { signRequest } from "../lib/sign-request";
 
 const USDC_MINT = address(USDC_MINT_ADDRESS);
 const TOKEN_PROGRAM = address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
@@ -88,11 +89,15 @@ export async function runApproveEmployee(opts: {
   const rpc = createSolanaRpc(RPC_URL);
   const employerAddr = signer.address;
 
+  // Sign ONCE for the whole approve flow. This single signature authenticates
+  // the employer to the internal routes (approve-plan, activate, collect-first).
+  const auth = await signRequest("payroll-approve", { itemId: opts.itemId });
+
   // 1. Create (or fetch) the employee's on-chain plan, server-side.
   const planRes = await fetch("/api/payroll/approve-plan", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ itemId: opts.itemId, wallet: employerAddr }),
+    body: JSON.stringify({ ...auth, itemId: opts.itemId }),
   });
   const planData = await planRes.json();
   if (!planRes.ok) throw new Error(planData.error ?? "Plan creation failed");
@@ -155,9 +160,9 @@ export async function runApproveEmployee(opts: {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      ...auth,
       itemId: opts.itemId,
       subscriptionPda,
-      wallet: employerAddr,
       startDate: opts.startMode === "date" ? (opts.startDate ?? null) : null,
     }),
   });
@@ -169,7 +174,7 @@ export async function runApproveEmployee(opts: {
       const cRes = await fetch("/api/payroll/collect-first", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemId: opts.itemId, wallet: employerAddr }),
+        body: JSON.stringify({ ...auth, itemId: opts.itemId }),
       });
       firstPay = await cRes.json().catch(() => null);
     } catch {

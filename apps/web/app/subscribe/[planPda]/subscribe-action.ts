@@ -22,6 +22,7 @@ import {
 import { findAssociatedTokenPda } from "@solana-program/token";
 import { getProvider } from "../../providers";
 import { USDC_MINT_ADDRESS, RPC_URL } from "../../lib/config";
+import { signRequest } from "../../lib/sign-request";
 
 const USDC_MINT = address(USDC_MINT_ADDRESS);
 const TOKEN_PROGRAM = address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
@@ -159,10 +160,11 @@ export async function runSubscribe(opts: {
   let firstCharge: { collected: boolean; signature?: string } | null = null;
   if (saveData?.subscriptionId) {
     try {
+      const auth = await signRequest("subscribe-collect", { subscriptionId: saveData.subscriptionId });
       const cRes = await fetch("/api/collect-first", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscriptionId: saveData.subscriptionId }),
+        body: JSON.stringify({ ...auth, subscriptionId: saveData.subscriptionId }),
       });
       firstCharge = await cRes.json().catch(() => null);
     } catch {

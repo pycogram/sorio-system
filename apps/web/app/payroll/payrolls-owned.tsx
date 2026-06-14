@@ -124,6 +124,7 @@ export function PayrollsOwned() {
       }
       await refresh();
     } catch (e: any) {
+      if (e?.message === "USER_CANCELLED") return;
       alert(e?.message ?? "Could not update payroll visibility.");
     } finally {
       setHidingId(null);

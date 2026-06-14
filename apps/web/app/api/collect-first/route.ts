@@ -8,6 +8,7 @@ import {
   findAssociatedTokenPda,
   TOKEN_PROGRAM,
 } from "../../lib/solana-engine";
+import { verifyAuth, AuthError } from "../../lib/verify-auth";
 
 export const runtime = "nodejs";
 
@@ -17,9 +18,24 @@ export const runtime = "nodejs";
 // the worker's subscription-collection logic for a single subscription.
 export async function POST(req: NextRequest) {
   try {
-    const { subscriptionId } = await req.json();
+    const { subscriptionId, wallet, timestamp, signature } = await req.json();
     if (!subscriptionId) {
       return NextResponse.json({ error: "Missing subscriptionId" }, { status: 400 });
+    }
+
+    // Verify the caller controls `wallet` and signed THIS subscription's charge.
+    let verifiedWallet: string;
+    try {
+      verifiedWallet = verifyAuth({
+        action: "subscribe-collect",
+        wallet,
+        timestamp,
+        signature,
+        params: { subscriptionId },
+      });
+    } catch (e) {
+      if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
+      throw e;
     }
 
     const db = createDb(
@@ -36,6 +52,11 @@ export async function POST(req: NextRequest) {
       .single();
     if (sErr || !sub) {
       return NextResponse.json({ error: "Subscription not found" }, { status: 404 });
+    }
+
+    // Ownership: the verified wallet must be the subscriber.
+    if ((sub as any).subscriber_wallet !== verifiedWallet) {
+      return NextResponse.json({ error: "not authorized" }, { status: 403 });
     }
 
     // Only collect for active subscriptions.

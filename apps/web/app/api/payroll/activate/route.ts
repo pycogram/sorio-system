@@ -1,13 +1,28 @@
 import { NextResponse } from "next/server";
 import { createClient as createDb } from "@supabase/supabase-js";
+import { verifyAuth, AuthError } from "../../../lib/verify-auth";
 
 export async function POST(req: Request) {
   try {
-    const { itemId, subscriptionPda, wallet, startDate } = await req.json();
+    const { itemId, subscriptionPda, startDate, wallet, timestamp, signature } = await req.json();
     if (!itemId || !subscriptionPda) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
-    if (!wallet) return NextResponse.json({ error: "wallet required" }, { status: 400 });
+
+    // Verify the flow signature (signed once at the start of the approve flow).
+    let verifiedWallet: string;
+    try {
+      verifiedWallet = verifyAuth({
+        action: "payroll-approve",
+        wallet,
+        timestamp,
+        signature,
+        params: { itemId },
+      });
+    } catch (e) {
+      if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
+      throw e;
+    }
 
     const db = createDb(
       process.env.SUPABASE_URL!,
@@ -15,7 +30,7 @@ export async function POST(req: Request) {
       { auth: { persistSession: false } }
     );
 
-    // Ownership check: the item's payroll must belong to this employer wallet.
+    // Ownership check uses the VERIFIED wallet.
     const { data: item } = await db
       .from("payroll_items")
       .select("id, payrolls(employer_wallet)")
@@ -23,14 +38,10 @@ export async function POST(req: Request) {
       .maybeSingle();
 
     const ownerWallet = (item as any)?.payrolls?.employer_wallet ?? null;
-    if (!item || ownerWallet !== wallet) {
+    if (!item || ownerWallet !== verifiedWallet) {
       return NextResponse.json({ error: "not authorized" }, { status: 403 });
     }
 
-    // next_payment_at controls when the worker first pays this employee:
-    //  - startDate provided  -> first payment on that date (then every period)
-    //  - no startDate         -> due now (worker pays on its next run, or the
-    //                            "pay now" flow charges immediately)
     const nextPaymentAt = startDate ? new Date(startDate).toISOString() : new Date().toISOString();
 
     const { error } = await db

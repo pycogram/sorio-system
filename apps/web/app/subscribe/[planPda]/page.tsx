@@ -153,6 +153,7 @@ export default function SubscribePage({
                       setDone(true);
                     } catch (e: any) {
                       console.error("subscribe failed:", e);
+                      if (e?.message === "USER_CANCELLED") return;
                       alert("Failed: " + (e?.message ?? e));
                     } finally {
                       setSubscribing(false);

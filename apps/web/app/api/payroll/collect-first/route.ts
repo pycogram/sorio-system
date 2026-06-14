@@ -8,19 +8,33 @@ import {
   findAssociatedTokenPda,
   TOKEN_PROGRAM,
 } from "../../../lib/solana-engine";
+import { verifyAuth, AuthError } from "../../../lib/verify-auth";
 
 export const runtime = "nodejs";
 
 const FEE_PERCENT = 2;
 
 // Pay the FIRST salary immediately when an employer chooses "Pay now" on
-// approval. Best-effort and idempotent: if a successful payment already exists
-// for this item, it won't pay again. Mirrors the worker's payroll logic for a
-// single payroll_item.
+// approval. Best-effort and idempotent.
 export async function POST(req: NextRequest) {
   try {
-    const { itemId, wallet } = await req.json();
+    const { itemId, wallet, timestamp, signature } = await req.json();
     if (!itemId) return NextResponse.json({ error: "Missing itemId" }, { status: 400 });
+
+    // Verify the flow signature (signed once at the start of the approve flow).
+    let verifiedWallet: string;
+    try {
+      verifiedWallet = verifyAuth({
+        action: "payroll-approve",
+        wallet,
+        timestamp,
+        signature,
+        params: { itemId },
+      });
+    } catch (e) {
+      if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
+      throw e;
+    }
 
     const db = createDb(
       process.env.SUPABASE_URL!,
@@ -28,7 +42,6 @@ export async function POST(req: NextRequest) {
       { auth: { persistSession: false } }
     );
 
-    // Load the item + its payroll (period, mint, employer).
     const { data: item, error: iErr } = await db
       .from("payroll_items")
       .select("id, employee_wallet, amount, status, plan_pda, max_payments, payrolls(employer_wallet, period_seconds, token_mint)")
@@ -41,8 +54,8 @@ export async function POST(req: NextRequest) {
     const pr: any = item.payrolls;
     const employer = pr?.employer_wallet;
 
-    // Ownership check.
-    if (wallet && employer && wallet !== employer) {
+    // Ownership check uses the VERIFIED wallet.
+    if (employer !== verifiedWallet) {
       return NextResponse.json({ error: "not authorized" }, { status: 403 });
     }
 
@@ -50,7 +63,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ paid: false, reason: "not active" });
     }
 
-    // Idempotency: don't pay if a successful payment already exists.
     const { count: existingSuccess } = await db
       .from("payroll_history")
       .select("id", { count: "exact", head: true })
@@ -63,11 +75,9 @@ export async function POST(req: NextRequest) {
     const mint = address(pr.token_mint);
     const feeWallet = address(process.env.PLATFORM_FEE_WALLET!);
 
-    // Build the puller client (collector key from env).
     const pullerBytes = new Uint8Array(JSON.parse(process.env.PLATFORM_PULLER_SECRET!));
     const { client, signer: puller } = await makeClient(pullerBytes);
 
-    // Ensure the fee wallet token account exists (idempotent).
     try {
       await ensureMerchantAta(puller, feeWallet, mint);
     } catch (e: any) {
@@ -78,7 +88,6 @@ export async function POST(req: NextRequest) {
     const fee = (salary * BigInt(Math.round(FEE_PERCENT * 100))) / 10000n;
     const totalNeeded = salary + fee;
 
-    // Check the employer's USDC balance covers salary + fee.
     const [employerAta] = await findAssociatedTokenPda({
       owner: address(employer),
       mint,
@@ -110,7 +119,6 @@ export async function POST(req: NextRequest) {
     let sig: string | null = null;
     let reason: string | null = null;
     try {
-      // Pull #1: FEE first (employer -> fee wallet).
       if (fee > 0n) {
         const feeRes = await collectPayment(client, puller, {
           amount: fee,
@@ -121,7 +129,6 @@ export async function POST(req: NextRequest) {
         });
         console.log("payroll collect-first FEE:", feeRes.signature);
       }
-      // Pull #2: SALARY (employer -> employee).
       const salRes = await collectPayment(client, puller, {
         amount: salary,
         delegator: address(employer),
@@ -137,7 +144,6 @@ export async function POST(req: NextRequest) {
       console.log("payroll collect-first failed:", reason);
     }
 
-    // Record the attempt.
     await db.from("payroll_history").insert({
       payroll_item_id: item.id,
       amount: Number(salary),
@@ -152,7 +158,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ paid: false, reason });
     }
 
-    // Success: advance, or complete if the cap is reached.
     const nowIso = new Date().toISOString();
     if (item.max_payments != null && item.max_payments <= 1) {
       await db

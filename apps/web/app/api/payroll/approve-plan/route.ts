@@ -2,18 +2,32 @@ import { NextRequest, NextResponse } from "next/server";
 import { address } from "@solana/kit";
 import { createClient as createDb } from "@supabase/supabase-js";
 import { makeClient, createPlan, ensureMerchantAta } from "../../../lib/solana-engine";
+import { USDC_MINT_ADDRESS } from "../../../lib/config";
+import { verifyAuth, AuthError } from "../../../lib/verify-auth";
 
 export const runtime = "nodejs";
-
-import { USDC_MINT_ADDRESS } from "../../../lib/config";
 
 const USDC_MINT = address(USDC_MINT_ADDRESS);
 
 export async function POST(req: NextRequest) {
   try {
-    const { itemId, wallet } = await req.json();
+    const { itemId, wallet, timestamp, signature } = await req.json();
     if (!itemId) return NextResponse.json({ error: "Missing itemId" }, { status: 400 });
-    if (!wallet) return NextResponse.json({ error: "wallet required" }, { status: 400 });
+
+    // Verify the flow signature (signed once at the start of the approve flow).
+    let verifiedWallet: string;
+    try {
+      verifiedWallet = verifyAuth({
+        action: "payroll-approve",
+        wallet,
+        timestamp,
+        signature,
+        params: { itemId },
+      });
+    } catch (e) {
+      if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
+      throw e;
+    }
 
     const db = createDb(
       process.env.SUPABASE_URL!,
@@ -30,9 +44,9 @@ export async function POST(req: NextRequest) {
     if (iErr) throw iErr;
     if (!item) return NextResponse.json({ error: "Item not found" }, { status: 404 });
 
-    // Ownership check: the item's payroll must belong to this employer wallet.
+    // Ownership check uses the VERIFIED wallet.
     const ownerWallet = (item.payrolls as any)?.employer_wallet ?? null;
-    if (ownerWallet !== wallet) {
+    if (ownerWallet !== verifiedWallet) {
       return NextResponse.json({ error: "not authorized" }, { status: 403 });
     }
 
@@ -53,15 +67,14 @@ export async function POST(req: NextRequest) {
     const pullerBytes = new Uint8Array(JSON.parse(process.env.PLATFORM_PULLER_SECRET!));
     const { client, signer: platform } = await makeClient(pullerBytes);
 
-    // amount stored = the employee's SALARY (micro-USDC). Employer bears 2% fee.
     const salary = BigInt(item.amount);
     const feePercent = Number(process.env.PLATFORM_FEE_PERCENT ?? "2");
     const total = salary + (salary * BigInt(Math.round(feePercent * 100))) / 10000n;
 
-    // On-chain plan amount = the TOTAL the employer authorizes (salary + fee).
     const periodSeconds = (item.payrolls as any)?.period_seconds ?? 2592000;
     const periodHours = Math.max(1, Math.round(periodSeconds / 3600));
     const planId = BigInt(Date.now());
+
     const { planPda, planBump } = await createPlan(client, platform, {
       planId,
       mint: USDC_MINT,
@@ -69,14 +82,12 @@ export async function POST(req: NextRequest) {
       periodHours,
     });
 
-    // Ensure the employee's USDC account exists so pay-outs can land.
     try {
       await ensureMerchantAta(platform, address(item.employee_wallet), USDC_MINT);
     } catch (e: any) {
       console.error("ensureMerchantAta (employee) failed (non-fatal):", e?.message ?? e);
     }
 
-    // Save plan info onto the payroll_item (still 'pending' until employer signs).
     const { error: uErr } = await db
       .from("payroll_items")
       .update({
