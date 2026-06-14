@@ -246,7 +246,7 @@ export function PayrollsOwned() {
                             <span>{usd(i.amount)} / {period}</span>
                             {i.status === "active" ? (
                               <div className="flex items-center gap-3">
-                                <span className="text-xs text-[var(--accent)]">active ✓</span>
+                                <span className="text-xs text-[var(--accent)]">active</span>
                                 <button
                                   onClick={() => handleRemove(i)}
                                   disabled={removing === i.id}
@@ -333,21 +333,55 @@ function StartSetting({
   const [mode, setMode] = useState<"pay_now" | "date">(payroll.start_mode ?? "pay_now");
   const [date, setDate] = useState(payroll.start_date ? payroll.start_date.split("T")[0] : "");
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(!payroll.start_mode);
   const today = new Date().toISOString().split("T")[0];
 
-  // Locked (payment already made): show the chosen setting read-only.
+  const fmtNice = (d: string | null) =>
+    d ? new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "";
+
+  const summary =
+    payroll.start_mode === "date" && payroll.start_date
+      ? `${locked ? "started" : "starts"} ${fmtNice(payroll.start_date)}`
+      : locked
+        ? "paid on approval"
+        : "pays on approval";
+
+  // ---- State 3: locked (a payment has been made) ----
   if (locked) {
     return (
-      <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--subtle)] px-4 py-3 text-sm">
-        <span className="text-[var(--muted)]">First payment: </span>
-        {payroll.start_mode === "date" && payroll.start_date
-          ? `starts ${new Date(payroll.start_date).toLocaleDateString()}`
-          : "paid on approval"}
-        <span className="ml-2 text-xs text-[var(--muted)]">locked</span>
+      <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--subtle)] px-4 py-3">
+        <span className="flex items-center gap-2 text-sm">
+          <CalIcon />
+          <span className="text-[var(--muted)]">First payment:</span>
+          <span className="font-medium">{summary}</span>
+        </span>
+        <span className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
+          <LockIcon /> Locked
+        </span>
       </div>
     );
   }
 
+  // ---- State 2: set, still editable (summary + Edit) ----
+  if (payroll.start_mode && !editing) {
+    return (
+      <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--card)] px-4 py-3">
+        <span className="flex items-center gap-2 text-sm">
+          <CalIcon />
+          <span className="text-[var(--muted)]">First payment:</span>
+          <span className="font-medium">{summary}</span>
+        </span>
+        <button
+          onClick={() => setEditing(true)}
+          className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
+        >
+          <EditIcon /> Edit
+        </button>
+      </div>
+    );
+  }
+
+  // ---- State 1: chooser (not set yet, or editing) ----
   const canSave = mode === "pay_now" || (mode === "date" && !!date);
 
   async function save() {
@@ -366,6 +400,7 @@ function StartSetting({
         const j = await res.json().catch(() => ({}));
         throw new Error(j.error ?? "Failed to save");
       }
+      setEditing(false);
       await onSaved();
     } catch (e: any) {
       alert(e?.message ?? "Could not save start setting.");
@@ -377,6 +412,7 @@ function StartSetting({
   return (
     <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--subtle)] p-3">
       <div className="mb-2.5 flex items-center gap-2">
+        <CalIcon />
         <span className="text-sm font-medium">When do payments start?</span>
         {!payroll.start_mode && (
           <span className="rounded-md bg-red-500/10 px-2 py-0.5 text-[11px] text-red-500">Required</span>
@@ -412,18 +448,54 @@ function StartSetting({
             className="rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-1.5 text-sm outline-none focus:border-[var(--primary)]"
           />
         )}
-        <button
-          onClick={save}
-          disabled={!canSave || saving}
-          className="ml-auto rounded-lg bg-[var(--btn)] px-4 py-1.5 text-sm font-medium text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)] disabled:opacity-40"
-        >
-          {saving ? "Saving…" : "Save"}
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          {payroll.start_mode && (
+            <button
+              onClick={() => {
+                setMode(payroll.start_mode ?? "pay_now");
+                setDate(payroll.start_date ? payroll.start_date.split("T")[0] : "");
+                setEditing(false);
+              }}
+              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--muted)] transition hover:border-[var(--foreground)]"
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            onClick={save}
+            disabled={!canSave || saving}
+            className="rounded-lg bg-[var(--btn)] px-4 py-1.5 text-sm font-medium text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)] disabled:opacity-40"
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </div>
       </div>
       <p className="mt-2.5 text-xs text-[var(--muted)]">
         Set this before approving anyone. You can change it until the first payment is made.
       </p>
     </div>
+  );
+}
+
+function CalIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--muted)]">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+}
+function EditIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  );
+}
+function LockIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
   );
 }
 

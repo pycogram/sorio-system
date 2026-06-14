@@ -491,7 +491,7 @@ export default function Home() {
               <ul className="mt-4 space-y-3 text-sm">
                 <li><a href="https://github.com/pycogram/paylo-system" target="_blank" rel="noreferrer" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">GitHub</a></li>
                 <li><a href="https://solana.com" target="_blank" rel="noreferrer" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Solana</a></li>
-                <li><span className="text-[var(--muted)] opacity-60">Docs</span> <span className="ml-1 text-[10px] text-[var(--muted)]">soon</span></li>
+                <li><a href="/docs" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Docs</a></li>
               </ul>
             </div>
           </div>
