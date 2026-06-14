@@ -1,43 +1,56 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createClient as createDb } from "@supabase/supabase-js";
+import { verifyAuth, AuthError } from "../../../../lib/verify-auth";
 
-export const runtime = "nodejs";
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const body = await req.json();
+    const { wallet, timestamp, signature, hidden } = body;
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  const { wallet, hidden } = await req.json();
+    // Verify the caller actually controls `wallet` and signed THIS action.
+    let verifiedWallet: string;
+    try {
+      verifiedWallet = verifyAuth({
+        action: "payroll-hide",
+        wallet,
+        timestamp,
+        signature,
+        params: { payrollId: id, hidden: !!hidden },
+      });
+    } catch (e) {
+      if (e instanceof AuthError) {
+        return NextResponse.json({ error: e.message }, { status: e.status });
+      }
+      throw e;
+    }
 
-  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
-  if (!wallet) return NextResponse.json({ error: "wallet required" }, { status: 400 });
-  if (typeof hidden !== "boolean") {
-    return NextResponse.json({ error: "hidden (boolean) required" }, { status: 400 });
+    const db = createDb(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false } }
+    );
+
+    // Ownership check now uses the VERIFIED wallet, not a claimed one.
+    const { data: payroll } = await db
+      .from("payrolls")
+      .select("id, employer_wallet")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!payroll || payroll.employer_wallet !== verifiedWallet) {
+      return NextResponse.json({ error: "not authorized" }, { status: 403 });
+    }
+
+    const { error } = await db
+      .from("payrolls")
+      .update({ hidden: !!hidden })
+      .eq("id", id);
+
+    if (error) throw error;
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    console.error("payroll hide failed:", e?.message ?? e);
+    return NextResponse.json({ error: e?.message ?? "failed" }, { status: 500 });
   }
-
-  const db = createDb(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  );
-
-  // Ownership check: the payroll must belong to this employer wallet.
-  const { data: payroll } = await db
-    .from("payrolls")
-    .select("id, employer_wallet")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (!payroll || payroll.employer_wallet !== wallet) {
-    return NextResponse.json({ error: "not authorized" }, { status: 403 });
-  }
-
-  const { error } = await db
-    .from("payrolls")
-    .update({ hidden })
-    .eq("id", id);
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true, hidden });
 }

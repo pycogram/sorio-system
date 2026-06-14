@@ -1,11 +1,26 @@
 import { NextResponse } from "next/server";
 import { createClient as createDb } from "@supabase/supabase-js";
+import { verifyAuth, AuthError } from "../../../lib/verify-auth";
 
 export async function POST(req: Request) {
   try {
-    const { itemId, wallet } = await req.json();
+    const { itemId, wallet, timestamp, signature } = await req.json();
     if (!itemId) return NextResponse.json({ error: "Missing itemId" }, { status: 400 });
-    if (!wallet) return NextResponse.json({ error: "wallet required" }, { status: 400 });
+
+    // Verify the caller controls `wallet` and signed THIS action.
+    let verifiedWallet: string;
+    try {
+      verifiedWallet = verifyAuth({
+        action: "payroll-remove",
+        wallet,
+        timestamp,
+        signature,
+        params: { itemId },
+      });
+    } catch (e) {
+      if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
+      throw e;
+    }
 
     const db = createDb(
       process.env.SUPABASE_URL!,
@@ -13,7 +28,7 @@ export async function POST(req: Request) {
       { auth: { persistSession: false } }
     );
 
-    // Ownership check: the item's payroll must belong to this employer wallet.
+    // Ownership check uses the VERIFIED wallet.
     const { data: item } = await db
       .from("payroll_items")
       .select("id, payrolls(employer_wallet)")
@@ -21,7 +36,7 @@ export async function POST(req: Request) {
       .maybeSingle();
 
     const ownerWallet = (item as any)?.payrolls?.employer_wallet ?? null;
-    if (!item || ownerWallet !== wallet) {
+    if (!item || ownerWallet !== verifiedWallet) {
       return NextResponse.json({ error: "not authorized" }, { status: 403 });
     }
 

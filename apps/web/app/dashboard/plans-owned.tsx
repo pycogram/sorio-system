@@ -4,6 +4,7 @@ import { useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { useWallet } from "../providers";
 import { fetcher } from "../lib/fetcher";
+import { signRequest } from "../lib/sign-request";
 
 type Subscriber = {
   id: string;
@@ -70,18 +71,19 @@ export function PlansOwned() {
     if (!address) return;
     setBusyPda(p.plan_pda);
     try {
+      const auth = await signRequest("plan-hide", { planPda: p.plan_pda, hidden: !p.hidden });
       const res = await fetch(`/api/plan/${p.plan_pda}/hide`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wallet: address, hidden: !p.hidden }),
+        body: JSON.stringify({ ...auth, hidden: !p.hidden }),
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
         throw new Error(j.error ?? "Failed to update plan");
       }
-      // Refresh the dashboard cache so the list reflects the change.
       if (cacheKey) await mutate(cacheKey);
     } catch (e: any) {
+      if (e?.message === "USER_CANCELLED") return;
       alert(e?.message ?? "Could not update plan visibility.");
     } finally {
       setBusyPda(null);

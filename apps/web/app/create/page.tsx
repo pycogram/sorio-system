@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Navbar } from "../navbar";
 import { useWallet } from "../providers";
+import { signRequest } from "../lib/sign-request";
 
 export default function CreatePlanPage() {
   const { address } = useWallet();
@@ -32,10 +33,11 @@ export default function CreatePlanPage() {
     setError(null);
     setLoading(true);
     try {
+      const auth = await signRequest("create-plan", { name, amount: String(amount), period: period ?? "", destinationWallet: address });
       const res = await fetch("/api/create-plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, amount, period, destinationWallet: address }),
+        body: JSON.stringify({ ...auth, name, amount, period, destinationWallet: address }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to create plan");

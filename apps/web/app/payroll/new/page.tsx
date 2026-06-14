@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Navbar } from "../../navbar";
 import { useWallet } from "../../providers";
+import { signRequest } from "../../lib/sign-request"; 
 
 type Employee = { wallet: string; amount: string; times: string };
 
@@ -46,10 +47,12 @@ export default function NewPayrollPage() {
     if (!address || !valid) return;
     setSaving(true);
     try {
+      const auth = await signRequest("payroll-create", { employerWallet: address, name: name.trim(), periodSeconds: String(period) });
       const r = await fetch("/api/payroll/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ...auth,
           employerWallet: address,
           name: name.trim(),
           periodSeconds: period,

@@ -7,6 +7,7 @@ import { runApproveEmployee } from "./approve-action";
 import { runCancel } from "../subscribe/[planPda]/cancel-action";
 import useSWR from "swr";
 import { fetcher } from "../lib/fetcher";
+import { signRequest } from "../lib/sign-request";
 
 type HistoryRow = { amount: number; fee: number; status: string; salary_tx: string | null; paid_at: string };
 type Item = {
@@ -90,10 +91,11 @@ export function PayrollsOwned() {
     setRemoving(item.id);
     try {
       await runCancel({ planPda: item.plan_pda, subscriptionPda: item.subscription_pda });
+      const auth = await signRequest("payroll-remove", { itemId: item.id });
       await fetch("/api/payroll/remove", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemId: item.id, wallet: address }),
+        body: JSON.stringify({ ...auth, itemId: item.id }),
       });
       await refresh();
     } catch (e: any) {
@@ -110,10 +112,11 @@ export function PayrollsOwned() {
     if (!address) return;
     setHidingId(p.id);
     try {
+      const auth = await signRequest("payroll-hide", { payrollId: p.id, hidden: !p.hidden });
       const res = await fetch(`/api/payroll/${p.id}/hide`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wallet: address, hidden: !p.hidden }),
+        body: JSON.stringify({ ...auth, hidden: !p.hidden }),
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
@@ -387,14 +390,12 @@ function StartSetting({
   async function save() {
     setSaving(true);
     try {
+      const startDate = mode === "date" ? date : null;
+      const auth = await signRequest("payroll-start", { payrollId: payroll.id, mode, startDate });
       const res = await fetch(`/api/payroll/${payroll.id}/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          wallet: walletAddr,
-          mode,
-          startDate: mode === "date" ? date : null,
-        }),
+        body: JSON.stringify({ ...auth, mode, startDate }),
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
@@ -403,6 +404,7 @@ function StartSetting({
       setEditing(false);
       await onSaved();
     } catch (e: any) {
+      if (e?.message === "USER_CANCELLED") return;
       alert(e?.message ?? "Could not save start setting.");
     } finally {
       setSaving(false);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createDb } from "@supabase/supabase-js";
+import { verifyAuth, AuthError } from "../../../../lib/verify-auth";
 
 export const runtime = "nodejs";
 
@@ -14,14 +15,28 @@ export const runtime = "nodejs";
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { wallet, mode, startDate } = await req.json();
+    const { wallet, timestamp, signature, mode, startDate } = await req.json();
 
-    if (!wallet) return NextResponse.json({ error: "wallet required" }, { status: 400 });
     if (mode !== "pay_now" && mode !== "date") {
       return NextResponse.json({ error: "mode must be 'pay_now' or 'date'" }, { status: 400 });
     }
     if (mode === "date" && !startDate) {
       return NextResponse.json({ error: "startDate required for date mode" }, { status: 400 });
+    }
+
+    // Verify the caller controls `wallet` and signed THIS action.
+    let verifiedWallet: string;
+    try {
+      verifiedWallet = verifyAuth({
+        action: "payroll-start",
+        wallet,
+        timestamp,
+        signature,
+        params: { payrollId: id, mode, startDate: startDate ?? null },
+      });
+    } catch (e) {
+      if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
+      throw e;
     }
 
     const db = createDb(
@@ -40,7 +55,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (pErr || !payroll) {
       return NextResponse.json({ error: "Payroll not found" }, { status: 404 });
     }
-    if ((payroll as any).employer_wallet !== wallet) {
+    if ((payroll as any).employer_wallet !== verifiedWallet) {
       return NextResponse.json({ error: "not authorized" }, { status: 403 });
     }
 
@@ -57,15 +72,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const startIso = mode === "date" ? new Date(startDate).toISOString() : null;
 
-    // Save the policy on the payroll.
     const { error: uErr } = await db
       .from("payrolls")
       .update({ start_mode: mode, start_date: startIso })
       .eq("id", id);
     if (uErr) throw uErr;
 
-    // If a date was set, move all already-active (approved, unpaid) employees
-    // to that date so the whole team's first payment lands together.
     if (mode === "date" && startIso) {
       await db
         .from("payroll_items")
