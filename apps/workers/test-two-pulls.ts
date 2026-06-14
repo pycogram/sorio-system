@@ -8,7 +8,7 @@ import {
 } from "../../packages/solana/src/index";
 
 const FEE_WALLET = "5cpWkW6GVi4YJM2CBzRbrEkNNVv2ADqFuz21Kqr1nNDL";
-const USDC = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
+const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
 async function main() {
   const db = createDb(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {

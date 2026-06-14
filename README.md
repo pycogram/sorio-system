@@ -1,11 +1,11 @@
-# Paylo
+# Solio
 
 Recurring payments on Solana, built on the Solana Foundation's native
-Subscriptions Delegation Program. One engine, two products: **Paylo Scribe**
-(subscriptions — a merchant bills customers) and **Paylo Roll** (payroll — an
+Subscriptions Delegation Program. One engine, two products: **Solio Scribe**
+(subscriptions — a merchant bills customers) and **Solio Roll** (payroll — an
 employer pays employees). Set terms once and payments collect or pay out
 automatically each cycle — non-custodial, low fees, near-instant settlement,
-and works for anyone with a Solana wallet. A third product, **Paylo API**
+and works for anyone with a Solana wallet. A third product, **Solio API**
 (programmatic access for builders), is planned.
 
 ## Status

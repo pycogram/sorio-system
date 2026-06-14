@@ -28,7 +28,7 @@ async function main() {
       plan_pda: "TESTPLAN" + Date.now(),
       name: "Test Plan",
       amount: 1_000_000,
-      token_mint: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+      token_mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
       period_seconds: 3600,
     })
     .select()

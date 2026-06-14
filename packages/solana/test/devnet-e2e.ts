@@ -13,7 +13,7 @@ import {
 } from "../src/index.js";
 
 const KEYS = join(homedir(), "Desktop/paylo/.keys");
-const USDC_MINT = address("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+const USDC_MINT = address("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 
 function loadKey(file: string): Uint8Array {
   return new Uint8Array(JSON.parse(readFileSync(join(KEYS, file), "utf8")));
