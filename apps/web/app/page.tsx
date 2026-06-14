@@ -138,7 +138,7 @@ export default function Home() {
           <Reveal>
             <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card)] px-3 py-1 text-xs font-medium text-[var(--muted)]">
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
-              Live on Solana devnet
+              Live on Solana Mainnet
             </div>
             <h1 className="mt-6 text-[40px] font-semibold leading-[1.05] tracking-tight sm:text-6xl">
               Approve once.<br />Paid on <span className="text-[var(--primary)]">repeat.</span>
@@ -431,7 +431,7 @@ export default function Home() {
                   </div>
                   <div>
                     <p className="font-semibold">Payment authorized</p>
-                    <p className="text-xs text-[var(--muted)]">Signed on Solana · devnet</p>
+                    <p className="text-xs text-[var(--muted)]">Signed on Solana · mainnet</p>
                   </div>
                 </div>
                 <div className="mt-6 space-y-3 text-sm">
@@ -461,7 +461,7 @@ export default function Home() {
               </p>
               <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card)] px-3 py-1 text-xs font-medium text-[var(--muted)]">
                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
-                Live on Solana devnet
+                Live on Solana Mainnet
               </div>
             </div>
 

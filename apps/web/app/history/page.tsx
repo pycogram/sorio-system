@@ -5,6 +5,7 @@ import useSWR from "swr";
 import { AppShell } from "../app-shell";
 import { useWallet } from "../providers";
 import { fetcher } from "../lib/fetcher";
+import { explorerTx } from "../lib/config";
 
 const usd = (n: number) => `$${(n / 1_000_000).toFixed(2)}`;
 const fmtDate = (d: string | null) =>
@@ -134,7 +135,7 @@ export default function HistoryPage() {
                   <span className="w-24 text-right text-xs text-[var(--muted)]">{fmtDate(r.when)}</span>
                   {r.tx ? (
                     <a
-                      href={`https://explorer.solana.com/tx/${r.tx}?cluster=devnet`}
+                      href={explorerTx(r.tx)}
                       target="_blank"
                       rel="noreferrer"
                       className="w-10 text-right text-xs text-[var(--primary)] hover:underline"

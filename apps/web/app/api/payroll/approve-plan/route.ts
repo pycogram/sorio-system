@@ -5,7 +5,9 @@ import { makeClient, createPlan, ensureMerchantAta } from "../../../lib/solana-e
 
 export const runtime = "nodejs";
 
-const USDC_MINT = address("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+import { USDC_MINT_ADDRESS } from "../../../lib/config";
+
+const USDC_MINT = address(USDC_MINT_ADDRESS);
 
 export async function POST(req: NextRequest) {
   try {

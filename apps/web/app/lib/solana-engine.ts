@@ -15,7 +15,7 @@ import {
 } from "@solana/kit";
 
 import { signer } from "@solana/kit-plugin-signer";
-import { solanaDevnetRpc } from "@solana/kit-plugin-rpc";
+import { solanaMainnetRpc } from "@solana/kit-plugin-rpc";
 import { getCreateAssociatedTokenIdempotentInstructionAsync } from "@solana-program/token";
 
 import {
@@ -28,31 +28,31 @@ import {
 } from "@solana/subscriptions";
 import { findAssociatedTokenPda } from "@solana-program/token";
 
+import { RPC_URL } from "./config"
+
 export const TOKEN_PROGRAM =
   "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address;
 
 // Build a client signed by whoever's keypair bytes you pass.
 export async function makeClient(secretBytes: Uint8Array, rpcUrl?: string) {
   const kp = await createKeyPairSignerFromBytes(secretBytes);
-  const url = rpcUrl ?? process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
+  const url = rpcUrl ?? RPC_URL;
   const client = await createClient()
     .use(signer(kp))
-    .use(solanaDevnetRpc({ rpcUrl: url }))
+    .use(solanaMainnetRpc({ rpcUrl: url }))
     .use(subscriptionsProgram());
   return { client, signer: kp };
 }
 
 // Build a client that signs via an externally-provided signer (e.g. a browser wallet).
 export async function makeClientWithSigner(walletSigner: any, rpcUrl?: string) {
-  const url = rpcUrl ?? process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
+  const url = rpcUrl ?? RPC_URL;
   const client = await createClient()
     .use(signer(walletSigner))
-    .use(solanaDevnetRpc({ rpcUrl: url }))
+    .use(solanaMainnetRpc({ rpcUrl: url }))
     .use(subscriptionsProgram());
   return { client, signer: walletSigner };
 }
-
-const RPC_URL = process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
 
 // Ensure a merchant's associated token account exists (idempotent).
 // Signed/paid by the platform. Safe to call repeatedly.

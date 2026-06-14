@@ -13,8 +13,7 @@ import {
 import { VersionedTransaction } from "@solana/web3.js";
 import { getCancelSubscriptionInstructionAsync } from "@solana/subscriptions";
 import { getProvider } from "../../providers";
-
-const RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
+import { RPC_URL } from "../../lib/config";
 
 function makePhantomSigner() {
   const provider = getProvider();

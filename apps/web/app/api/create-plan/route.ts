@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFileSync } from "node:fs";
 import { address } from "@solana/kit";
 import { createClient as createDb } from "@supabase/supabase-js";
 import { makeClient, createPlan, ensureMerchantAta } from "../../lib/solana-engine";
+import { USDC_MINT_ADDRESS } from "../../lib/config";
 
 export const runtime = "nodejs";
 
-const USDC_MINT = address("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+const USDC_MINT = address(USDC_MINT_ADDRESS);
 
 const periodHoursMap: Record<string, number> = {
   hourly: 1,  
