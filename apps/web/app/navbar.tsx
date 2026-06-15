@@ -26,7 +26,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
   return (
     <nav className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between bg-[var(--background)] px-4 md:px-8 py-5 border-b border-[var(--border)] md:static md:z-auto">
       <Link href="/dashboard" className="flex items-center gap-2">
-        <Image src="/sorio-logo.png" alt="Sorio" width={28} height={28} className="rounded-lg" />
+        <Image src="/sorio-new-logo.png" alt="Sorio" width={28} height={28} className="rounded-lg" />
         <span className="text-lg font-semibold tracking-tight">Sorio</span>
       </Link>
       <div className="flex items-center gap-4">
@@ -43,7 +43,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
             </button>
 
             {menuOpen && (
-              <div className="absolute right-0 mt-2 w-52 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-xl">
+              <div className="absolute left-0 md:right-0 mt-2 w-52 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-xl">
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(address);
@@ -90,7 +90,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
             disabled={connecting}
             className="rounded-lg border border-[var(--border)] px-4 py-1.5 text-sm font-medium transition hover:border-[var(--foreground)] disabled:opacity-60"
           >
-            {connecting ? "Connecting…" : "Connect Wallet"}
+            Connect Wallet
           </button>
         )}
 
