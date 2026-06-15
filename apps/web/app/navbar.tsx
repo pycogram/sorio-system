@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import { useWallet, useTheme } from "./providers";
 
 export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
-  const { address, connect, switchWallet, disconnect } = useWallet();
+  const { address, connecting, connect, switchWallet, disconnect } = useWallet();
   const { theme, toggle } = useTheme();
   const short = address ? `${address.slice(0, 4)}…${address.slice(-4)}` : null;
 
@@ -87,9 +87,10 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
         ) : (
           <button
             onClick={() => connect()}
-            className="rounded-lg border border-[var(--border)] px-4 py-1.5 text-sm font-medium transition hover:border-[var(--foreground)]"
+            disabled={connecting}
+            className="rounded-lg border border-[var(--border)] px-4 py-1.5 text-sm font-medium transition hover:border-[var(--foreground)] disabled:opacity-60"
           >
-            Connect Wallet
+            {connecting ? "Connecting…" : "Connect Wallet"}
           </button>
         )}
 

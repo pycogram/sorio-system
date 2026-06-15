@@ -50,9 +50,17 @@ function Reveal({
 
 export default function Home() {
   const { theme, toggle } = useTheme();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 80);
+    onScroll(); // set initial state (handles reload mid-page)
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[var(--background)] text-[var(--foreground)]">
+    <main className="relative min-h-screen overflow-hidden bg-[var(--background)] text-[var(--foreground)] pt-[72px]">
       {/* Atmospheric glow */}
       <div
         aria-hidden
@@ -99,35 +107,43 @@ export default function Home() {
         </svg>
       </div>
 
-      {/* Header */}
-      <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-8 py-5">
-        <div className="flex items-center gap-1">
-          <Image src="/z-sorio-tbg-logo.png" alt="Sorio" width={28} height={28} className="rounded-lg" />
-          <span className="text-lg font-semibold tracking-tight">Sorio</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={toggle}
-            aria-label="Toggle theme"
-            className="rounded-lg border border-[var(--border)] p-2 transition hover:border-[var(--primary)]"
-          >
-            {theme === "light" ? (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-              </svg>
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="5" />
-                <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-              </svg>
-            )}
-          </button>
-          <a href="/dashboard" className="rounded-lg bg-[var(--btn)] px-4 py-2 text-sm font-medium text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)]">
-            Launch app
-          </a>
+      {/* Header (fixed; transparent over hero, solid after scroll) */}
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${
+          scrolled
+            ? "border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--background)_85%,transparent)] backdrop-blur-md"
+            : "border-b border-transparent bg-transparent"
+        }`}
+      >
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-8 py-5">
+          <div className="flex items-center gap-1">
+            <Image src="/z-sorio-tbg-logo.png" alt="Sorio" width={28} height={28} className="rounded-lg" />
+            <span className="text-lg font-semibold tracking-tight">Sorio</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={toggle}
+              aria-label="Toggle theme"
+              className="rounded-lg border border-[var(--border)] p-2 transition hover:border-[var(--primary)]"
+            >
+              {theme === "light" ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="5" />
+                  <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                  <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                </svg>
+              )}
+            </button>
+            <a href="/dashboard" className="rounded-lg bg-[var(--btn)] px-4 py-2 text-sm font-medium text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)]">
+              Launch app
+            </a>
+          </div>
         </div>
       </header>
 

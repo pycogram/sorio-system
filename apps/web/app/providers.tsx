@@ -79,13 +79,14 @@ function isMobile() {
 
 type WalletCtx = {
   address: string | null;
+  connecting: boolean;
   connect: () => void;
   switchWallet: () => Promise<void>;
   disconnect: () => Promise<void>;
 };
 type ThemeCtx = { theme: "light" | "dark"; toggle: () => void };
 
-const WalletContext = createContext<WalletCtx>({ address: null, connect: () => {}, switchWallet: async () => {}, disconnect: async () => {} });
+const WalletContext = createContext<WalletCtx>({ address: null, connecting: false, connect: () => {}, switchWallet: async () => {}, disconnect: async () => {} });
 const ThemeContext = createContext<ThemeCtx>({ theme: "light", toggle: () => {} });
 
 export function useWallet() { return useContext(WalletContext); }
@@ -99,6 +100,7 @@ export function Providers({
   initialTheme?: "light" | "dark";
 }) {
   const [address, setAddress] = useState<string | null>(null);
+  const [connecting, setConnecting] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">(initialTheme);
   const [bound, setBound] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -150,8 +152,8 @@ export function Providers({
 
   // Connect to a specific wallet kind (called after the user picks one).
   const connectTo = useCallback(async (kind: WalletKind) => {
-    setSelectedWallet(kind);
     setPickerOpen(false);
+    setConnecting(true);
 
     const direct = providerFor(kind);
     const p = direct ?? (await waitForProvider());
@@ -159,17 +161,21 @@ export function Providers({
     if (!p) {
       // No injected provider for this wallet. On mobile, deep-link into the
       // wallet's in-app browser. On desktop, send them to install it.
+      // NOTE: do NOT persist the choice here — deep-linking is a navigation,
+      // not a successful connection. Persisting would make a later "Connect"
+      // in plain Chrome skip the picker and force this same wallet again.
       if (isMobile()) {
         window.location.href = deepLink(kind);
-        return;
+        return; // leaving the page; connecting state goes with the unload
       }
-      clearSelectedWallet();
       window.open(kind === "phantom" ? "https://phantom.app/" : "https://solflare.com/", "_blank");
+      setConnecting(false);
       return;
     }
 
     try {
       const r = await p.connect();
+      setSelectedWallet(kind);          // persist ONLY after a real connection
       setAddress(r.publicKey.toString());
       if (!bound) {
         setBound(true);
@@ -178,6 +184,8 @@ export function Providers({
       }
     } catch {
       /* user cancelled */
+    } finally {
+      setConnecting(false);
     }
   }, [bound]);
 
@@ -217,7 +225,7 @@ export function Providers({
 
   return (
     <ThemeContext.Provider value={{ theme, toggle }}>
-      <WalletContext.Provider value={{ address, connect, switchWallet, disconnect }}>
+      <WalletContext.Provider value={{ address, connecting, connect, switchWallet, disconnect }}>
         {children}
         {pickerOpen && <WalletPicker onPick={connectTo} onClose={() => setPickerOpen(false)} />}
       </WalletContext.Provider>
