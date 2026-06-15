@@ -96,8 +96,8 @@ export default function Dashboard() {
           <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
             <Stat label="Revenue (subscriptions)" value={usd(revenue)} accent />
             <Stat label="Paid out (payroll)" value={usd(paidOut)} />
-            <Stat label="Active subscribers" value={String(activeSubscribers)} />
             <Stat label="Received (paychecks)" value={usd(totalReceived)} accent />
+            <Stat label="Active subscribers" value={String(activeSubscribers)} />
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -204,8 +204,8 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-5 py-3">
-      <p className="text-lg font-semibold">{value}</p>
       <p className="text-xs text-[var(--muted)]">{label}</p>
+      <p className="text-lg font-semibold">{value}</p>
     </div>
   );
 }
