@@ -117,7 +117,7 @@ export default function Home() {
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-8 py-5">
           <div className="flex items-center gap-2">
-            <Image src="/x-sorio-logo.png" alt="Sorio" width={28} height={28} className="rounded-lg" />
+            <Image src="/sorio-logo.png" alt="Sorio" width={28} height={28} className="rounded-lg" />
             <span className="text-lg font-semibold tracking-tight">Sorio</span>
           </div>
           <div className="flex items-center gap-3">
@@ -468,7 +468,7 @@ export default function Home() {
             {/* Brand column */}
             <div className="col-span-2">
               <div className="flex items-center gap-2">
-                <Image src="/x-sorio-logo.png" alt="Sorio" width={25} height={25} className="rounded-lg" />
+                <Image src="/sorio-logo.png" alt="Sorio" width={25} height={25} className="rounded-lg" />
                 <span className="text-lg font-semibold tracking-tight">Sorio</span>
               </div>
               <p className="mt-4 max-w-xs text-sm text-[var(--muted)]">
