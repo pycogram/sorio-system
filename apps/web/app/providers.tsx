@@ -189,16 +189,9 @@ export function Providers({
     }
   }, [bound]);
 
-  // Public connect(): if a wallet was already chosen, reconnect to it;
-  // otherwise open the picker so the user selects Phantom or Solflare.
   const connect = useCallback(() => {
-    const existing = getSelectedWallet();
-    if (existing) {
-      connectTo(existing);
-    } else {
-      setPickerOpen(true);
-    }
-  }, [connectTo]);
+    setPickerOpen(true);
+  }, []);
 
   const disconnect = useCallback(async () => {
     const p = getProvider();
