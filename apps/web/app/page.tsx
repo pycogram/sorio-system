@@ -102,7 +102,7 @@ export default function Home() {
       {/* Header */}
       <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-8 py-5">
         <div className="flex items-center gap-2">
-          <Image src="/z-paylo-logo.png" alt="Sorio" width={30} height={30} className="rounded-lg" />
+          <Image src="/z-sorio-tbg-logo.png" alt="Sorio" width={30} height={30} className="rounded-lg" />
           <span className="text-lg font-semibold tracking-tight">Sorio</span>
         </div>
         <div className="flex items-center gap-3">
@@ -452,7 +452,7 @@ export default function Home() {
             {/* Brand column */}
             <div className="col-span-2">
               <div className="flex items-center gap-2">
-                <Image src="/z-paylo-logo.png" alt="Sorio" width={28} height={28} className="rounded-lg" />
+                <Image src="/z-sorio-tbg-logo.png" alt="Sorio" width={28} height={28} className="rounded-lg" />
                 <span className="text-lg font-semibold tracking-tight">Sorio</span>
               </div>
               <p className="mt-4 max-w-xs text-sm text-[var(--muted)]">

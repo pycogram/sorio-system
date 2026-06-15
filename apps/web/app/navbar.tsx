@@ -26,7 +26,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
   return (
     <nav className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between bg-[var(--background)] px-4 md:px-8 py-5 border-b border-[var(--border)] md:static md:z-auto">
       <Link href="/dashboard" className="flex items-center gap-2">
-        <Image src="/z-paylo-logo.png" alt="Sorio" width={28} height={28} className="rounded-lg" />
+        <Image src="/z-sorio-tbg-logo.png" alt="Sorio" width={28} height={28} className="rounded-lg" />
         <span className="text-lg font-semibold tracking-tight">Sorio</span>
       </Link>
       <div className="flex items-center gap-4">
