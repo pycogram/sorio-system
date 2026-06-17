@@ -48,6 +48,44 @@ function Reveal({
   );
 }
 
+/* $SORIO token chip: shows the ticker + a copyable contract address. */
+function TokenChip() {
+  const [copied, setCopied] = useState(false);
+  // TODO: replace with the real $SORIO contract address once the token launches.
+  const CA = "SoR1oXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+  const shortCA = `${CA.slice(0, 4)}…${CA.slice(-4)}`;
+
+  const copy = () => {
+    navigator.clipboard.writeText(CA);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
+  };
+
+  return (
+    <div className="mt-5 w-fit flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card)] px-2.5 py-1.5 text-xs">
+      <span className="rounded-full bg-[var(--primary)] px-2 py-0.5 font-semibold text-white">$SORIO</span>
+      <button
+        onClick={copy}
+        className="group flex items-center gap-1.5 font-mono text-[var(--muted)] transition hover:text-[var(--foreground)]"
+        aria-label="Copy contract address"
+        title={CA}
+      >
+        <span>{shortCA}</span>
+        {copied ? (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--accent)]">
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+        ) : (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-60 transition group-hover:opacity-100">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+        )}
+      </button>
+    </div>
+  );
+}
+
 export default function Home() {
   const { theme, toggle } = useTheme();
   const [scrolled, setScrolled] = useState(false);
@@ -156,6 +194,8 @@ export default function Home() {
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
               Live on Solana Mainnet
             </div>
+             {/* $SORIO token ticker + contract address */}
+            <TokenChip />            
             <h1 className="mt-6 text-[40px] font-semibold leading-[1.05] tracking-tight sm:text-6xl">
               Approve once.<br />Paid on <span className="text-[var(--primary)]">repeat.</span>
             </h1>
@@ -505,6 +545,7 @@ export default function Home() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Resources</p>
               <ul className="mt-4 space-y-3 text-sm">
+                <li><a href="https://x.com/soriopay" target="_blank" rel="noreferrer" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">X (Twitter)</a></li>
                 <li><a href="https://github.com/pycogram/paylo-system" target="_blank" rel="noreferrer" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">GitHub</a></li>
                 <li><a href="https://solana.com" target="_blank" rel="noreferrer" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Solana</a></li>
                 <li><a href="/docs" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Docs</a></li>

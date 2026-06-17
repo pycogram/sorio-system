@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://soriopay.com"),
   title: {
-    default: "Sorio — Recurring Payments & Payroll on Solana",
+    default: "Sorio - Recurring Payments & Payroll on Solana",
     template: "%s · Sorio",
   },
   description:
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "Sorio",
-    title: "Sorio — Recurring Payments & Payroll on Solana",
+    title: "Sorio - Recurring Payments & Payroll on Solana",
     description:
       "Approve once on-chain, get paid on repeat. Non-custodial recurring payments and payroll in USDC, live on Solana mainnet.",
     url: "https://soriopay.com",
@@ -41,7 +41,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Sorio — Recurring Payments & Payroll on Solana",
+    site: "@soriopay",
+    creator: "@soriopay",
+    title: "Sorio - Recurring Payments & Payroll on Solana",
     description:
       "Approve once on-chain, get paid on repeat. Non-custodial, in USDC, live on Solana mainnet.",
     images: ["/og-image.png"],
