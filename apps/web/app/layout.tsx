@@ -15,8 +15,42 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sorio",
-  description: "Recurring payments on Solana",
+  metadataBase: new URL("https://soriopay.com"),
+  title: {
+    default: "Sorio — Recurring Payments & Payroll on Solana",
+    template: "%s · Sorio",
+  },
+  description:
+    "Non-custodial recurring payments and payroll on Solana. Approve once on-chain, get paid every cycle in USDC. No cards, no banks, no custody.",
+  keywords: [
+    "Solana payments",
+    "crypto subscriptions",
+    "on-chain payroll",
+    "USDC recurring payments",
+    "non-custodial billing",
+    "recurring crypto payments",
+  ],
+  openGraph: {
+    type: "website",
+    siteName: "Sorio",
+    title: "Sorio — Recurring Payments & Payroll on Solana",
+    description:
+      "Approve once on-chain, get paid on repeat. Non-custodial recurring payments and payroll in USDC, live on Solana mainnet.",
+    url: "https://soriopay.com",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Sorio" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Sorio — Recurring Payments & Payroll on Solana",
+    description:
+      "Approve once on-chain, get paid on repeat. Non-custodial, in USDC, live on Solana mainnet.",
+    images: ["/og-image.png"],
+  },
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default async function RootLayout({
