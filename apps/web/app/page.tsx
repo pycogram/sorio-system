@@ -52,7 +52,7 @@ function Reveal({
 function TokenChip() {
   const [copied, setCopied] = useState(false);
   // TODO: replace with the real $SORIO contract address once the token launches.
-  const CA = "SoR1oXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+  const CA = "A6VcXrUUYjNiR8RkHCRNu8zuxWUMnhMWoX11j6Bapump";
   const shortCA = `${CA.slice(0, 4)}…${CA.slice(-4)}`;
 
   const copy = () => {

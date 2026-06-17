@@ -1,11 +1,11 @@
-# Solio
+# Sorio
 
 Recurring payments on Solana, built on the Solana Foundation's native
-Subscriptions Delegation Program. One engine, two products: **Solio Scribe**
-(subscriptions — a merchant bills customers) and **Solio Roll** (payroll — an
+Subscriptions Delegation Program. One engine, two products: **Sorio Scribe**
+(subscriptions - a merchant bills customers) and **Sorio Roll** (payroll - an
 employer pays employees). Set terms once and payments collect or pay out
-automatically each cycle — non-custodial, low fees, near-instant settlement,
-and works for anyone with a Solana wallet. A third product, **Solio API**
+automatically each cycle - non-custodial, low fees, near-instant settlement,
+and works for anyone with a Solana wallet. A third product, **Sorio API**
 (programmatic access for builders), is planned.
 
 ## Status
@@ -20,25 +20,25 @@ next milestones.
 
 A pnpm monorepo:
 
-- `packages/solana` — the recurring-payments engine. Reusable functions
+- `packages/solana` - the recurring-payments engine. Reusable functions
   (`createPlan`, `makeClient`, `subscribe`, `collectPayment`, `ensureMerchantAta`)
   wrapping the Subscriptions Delegation Program via `@solana/subscriptions` +
   `@solana/kit`. Accepts a custom RPC URL so web and worker can route through a
   dedicated endpoint.
-- `apps/workers` — Cloudflare Worker. A cron that finds due subscriptions and
+- `apps/workers` - Cloudflare Worker. A cron that finds due subscriptions and
   payrolls, collects/pays on-chain (fee split handled non-custodially via two
   direct transfers), records history, and advances each schedule.
-- `apps/web` — Next.js frontend. Merchant/employer dashboards, customer subscribe
+- `apps/web` - Next.js frontend. Merchant/employer dashboards, customer subscribe
   pages, and the employee paycheck view.
 
 ## Products
 
-1. **Paylo Scribe** — merchant → customer recurring billing. Create plans, share
+1. **Paylo Scribe** - merchant → customer recurring billing. Create plans, share
    a subscribe link, get paid automatically each cycle.
-2. **Paylo Roll** — employer → employee payroll on the same rail. Add employees,
+2. **Paylo Roll** - employer → employee payroll on the same rail. Add employees,
    approve each on-chain, pay salaries automatically on a daily/weekly/monthly
    schedule.
-3. **Paylo API** — programmatic access for builders (planned).
+3. **Paylo API** - programmatic access for builders (planned).
 
 All run on the same engine; role assignment and UI differ.
 
@@ -52,7 +52,7 @@ dedicated provider for reliability.
 ## How it works
 
 Payments are authorized by the payer's own wallet and enforced on-chain by the
-Subscriptions Delegation Program. The approved amount is a hard ceiling — Paylo
+Subscriptions Delegation Program. The approved amount is a hard ceiling - Paylo
 can never pull more than authorized, funds never touch Paylo's custody, and the
 payer can cancel (revoke) anytime, which takes effect immediately on-chain. A
 small platform fee is collected as a separate direct transfer, so fee splitting
