@@ -1,11 +1,11 @@
-## $Sorio
+# $Sorio
 
 Contract Address:
 ```bash
 A6VcXrUUYjNiR8RkHCRNu8zuxWUMnhMWoX11j6Bapump
 ```
 
-# Sorio
+## Sorio
 
 Recurring payments on Solana, built on the Solana Foundation's native
 Subscriptions Delegation Program. One engine, two products: **Sorio Scribe**
