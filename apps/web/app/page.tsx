@@ -546,7 +546,7 @@ export default function Home() {
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Resources</p>
               <ul className="mt-4 space-y-3 text-sm">
                 <li><a href="https://x.com/soriopay" target="_blank" rel="noreferrer" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">X (Twitter)</a></li>
-                <li><a href="https://github.com/" target="_blank" rel="noreferrer" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">GitHub</a></li>
+                <li><a href="https://github.com/pycogram/sorio-system" target="_blank" rel="noreferrer" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">GitHub</a></li>
                 <li><a href="https://solana.com" target="_blank" rel="noreferrer" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Solana</a></li>
                 <li><a href="/docs" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Docs</a></li>
               </ul>
