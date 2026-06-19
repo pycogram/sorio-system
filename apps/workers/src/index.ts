@@ -17,6 +17,11 @@ if (typeof addEventListener === "function") {
   });
 }
 
+// $SORIO holder fee discount (Token-2022 mint).
+const SORIO_MINT = "A6VcXrUUYjNiR8RkHCRNu8zuxWUMnhMWoX11j6Bapump";
+const SORIO_TOKEN_2022 = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+const SORIO_THRESHOLD = 20000n * 1_000_000n; // 20,000 $SORIO (6 decimals)
+
 interface Env {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
@@ -100,7 +105,26 @@ export default {
       // merchant receives; fee = the rest (goes to the platform fee wallet).
       const total = BigInt(plan.amount);
       const merchantAmount = plan.merchant_amount != null ? BigInt(plan.merchant_amount) : total;
-      const feeAmount = total - merchantAmount;
+
+      // $SORIO holder discount: subscriber holding >= threshold pays a 0.5% fee
+      // (of merchant amount) instead of the baked-in 2%. Re-checked each cycle.
+      // Puller can pull less than the authorized total, so we pull a smaller fee.
+      let feeAmount = total - merchantAmount; // default: baked-in fee (2%)
+      try {
+        const [sorioAta] = await findAssociatedTokenPda({
+          owner: address(sub.subscriber_wallet),
+          mint: address(SORIO_MINT),
+          tokenProgram: address(SORIO_TOKEN_2022),
+        });
+        const b = await client.rpc.getTokenAccountBalance(sorioAta).send();
+        if (BigInt(b.value.amount) >= SORIO_THRESHOLD) {
+          feeAmount = (merchantAmount * 50n) / 10000n; // 0.5%
+          console.log(`   subscriber ${sub.id} is $SORIO holder -> discounted fee ${feeAmount}`);
+        }
+      } catch (e: any) {
+        // not a holder / unreadable -> keep default fee
+        console.log(`   $SORIO read failed for ${sub.id} (treating as non-holder):`, e?.message ?? e);
+      }
 
       const [merchantAta] = await findAssociatedTokenPda({
         owner: address(destWallet),
@@ -115,13 +139,34 @@ export default {
 
       console.log(`\n-- subscription ${sub.id}, total ${total} (merchant ${merchantAmount}, fee ${feeAmount})`);
 
+      // Double-fee guard: if a previous attempt already pulled the fee for this
+      // cycle but failed before the merchant pull, there will be a row with
+      // fee_tx set and tx_signature null. Reuse that fee — do NOT pull it again.
+      let feeSig: string | null = null;
+      let feeAlreadyPulled = false;
+      {
+        const { data: pendingFee } = await db
+          .from("billing_history")
+          .select("fee_tx")
+          .eq("subscription_id", sub.id)
+          .not("fee_tx", "is", null)
+          .is("tx_signature", null)
+          .order("attempted_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (pendingFee?.fee_tx) {
+          feeSig = pendingFee.fee_tx;
+          feeAlreadyPulled = true;
+          console.log(`   fee already pulled for ${sub.id} this cycle (${feeSig}) — skipping fee pull`);
+        }
+      }
+
       let ok = false;
       let sig: string | null = null;
       let reason: string | null = null;
       try {
-        // Pull #1: FEE first (customer -> fee wallet) so the platform fee is
-        // never collected without the merchant pull also going through.
-        if (feeAmount > 0n) {
+        // Pull #1: FEE first (customer -> fee wallet) — unless already pulled.
+        if (feeAmount > 0n && !feeAlreadyPulled) {
           const feeResult = await collectPayment(client, puller, {
             amount: feeAmount,
             delegator: address(sub.subscriber_wallet),
@@ -129,7 +174,8 @@ export default {
             planPda: address(plan.plan_pda),
             receiverAta: feeAta,
           });
-          console.log("   *** FEE COLLECTED ***", feeResult.signature);
+          feeSig = feeResult.signature;
+          console.log("   *** FEE COLLECTED ***", feeSig);
         }
 
         // Pull #2: merchant's share (customer -> merchant).
@@ -149,11 +195,14 @@ export default {
         console.log("   collection failed:", reason);
       }
 
+      // Record the attempt. fee_tx is stored even on partial failure so the
+      // retry guard above can see the fee was already pulled.
       const { error: histErr } = await db.from("billing_history").insert({
         subscription_id: sub.id,
         amount: plan.amount,
         status: ok ? "success" : "failed",
         tx_signature: sig,
+        fee_tx: feeSig,
         failure_reason: reason,
       });
       if (histErr) console.log("   billing_history insert error:", histErr.message);
@@ -189,12 +238,9 @@ export default {
       }
     }
 
-    // ===== PAYROLL (Sorio Roll) =====
-    const FEE_PERCENT = 2;
-
     const { data: payrolls, error: pErr } = await db
       .from("payrolls")
-      .select("id, employer_wallet, period_seconds, token_mint, payroll_items(id, employee_wallet, amount, status, plan_pda, subscription_pda, next_payment_at, max_payments)")
+      .select("id, employer_wallet, period_seconds, token_mint, fee_percent, payroll_items(id, employee_wallet, amount, status, plan_pda, subscription_pda, next_payment_at, max_payments)")
       .order("created_at", { ascending: false });
 
     if (pErr) {
@@ -203,6 +249,7 @@ export default {
       for (const pr of payrolls ?? []) {
         const employer = pr.employer_wallet;
         const mint = pr.token_mint;
+        const FEE_PERCENT = Number((pr as any).fee_percent ?? 2);
         const items = (pr.payroll_items ?? []).filter(
           (i: any) =>
             i.status === "active" &&
@@ -284,12 +331,33 @@ export default {
             tokenProgram: TOKEN_PROGRAM,
           });
 
+          // Double-fee guard: reuse a fee already pulled this cycle (a prior
+          // partial failure leaves a row with fee_tx set and salary_tx null).
+          let feeSig: string | null = null;
+          let feeAlreadyPulled = false;
+          {
+            const { data: pendingFee } = await db
+              .from("payroll_history")
+              .select("fee_tx")
+              .eq("payroll_item_id", i.id)
+              .not("fee_tx", "is", null)
+              .is("salary_tx", null)
+              .order("paid_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (pendingFee?.fee_tx) {
+              feeSig = pendingFee.fee_tx;
+              feeAlreadyPulled = true;
+              console.log(`   payroll ${i.id}: fee already pulled this cycle (${feeSig}) — skipping fee pull`);
+            }
+          }
+
           let ok = false;
           let sig: string | null = null;
           let reason: string | null = null;
           try {
-            // Pull #1: FEE first (employer -> fee wallet).
-            if (fee > 0n) {
+            // Pull #1: FEE first (employer -> fee wallet) — unless already pulled.
+            if (fee > 0n && !feeAlreadyPulled) {
               const feeRes = await collectPayment(client, puller, {
                 amount: fee,
                 delegator: address(employer),
@@ -297,7 +365,8 @@ export default {
                 planPda: address(i.plan_pda),
                 receiverAta: feeAta,
               });
-              console.log(`   payroll ${i.id} FEE collected`, feeRes.signature);
+              feeSig = feeRes.signature;
+              console.log(`   payroll ${i.id} FEE collected`, feeSig);
             }
             // Pull #2: SALARY (employer -> employee).
             const salRes = await collectPayment(client, puller, {
@@ -315,14 +384,14 @@ export default {
             console.log(`   payroll ${i.id} failed:`, reason);
           }
 
-          // Record payment in history (success or failure).
+          // Record payment in history (fee_tx stored even on partial failure).
           const { error: phErr } = await db.from("payroll_history").insert({
             payroll_item_id: i.id,
             amount: Number(salary),
             fee: Number(fee),
             status: ok ? "success" : "failed",
             salary_tx: sig,
-            fee_tx: null,
+            fee_tx: feeSig,
             failure_reason: reason,
           });
           if (phErr) console.log(`   payroll_history insert error:`, phErr.message);
