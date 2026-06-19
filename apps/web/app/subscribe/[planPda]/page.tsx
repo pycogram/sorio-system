@@ -19,6 +19,13 @@ type Plan = {
 const periodLabel = (s: number) =>
   s === 3600 ? "hour" : s === 86400 ? "day" : s === 604800 ? "week" : s === 2592000 ? "month" : s === 31536000 ? "year" : `${s / 3600}h`;
 
+// Format a USD amount; show extra precision for tiny (sub-cent) fees so they
+// don't round away to $0.00.
+function usd(n: number): string {
+  if (n > 0 && n < 0.01) return `$${n.toFixed(4)}`;
+  return `$${n.toFixed(2)}`;
+}
+
 export default function SubscribePage({
   params,
 }: {
@@ -34,6 +41,7 @@ export default function SubscribePage({
   const [done, setDone] = useState(false);
   const [limitOn, setLimitOn] = useState(false);
   const [times, setTimes] = useState("3");
+  const [isHolder, setIsHolder] = useState(false);
 
   useEffect(() => {
     fetch(`/api/plan/${planPda}`)
@@ -54,6 +62,19 @@ export default function SubscribePage({
       .catch(() => {});
   }, [address, plan]);
 
+  // Check whether the connected wallet is a $SORIO holder, so we can show the
+  // fee they'll actually be charged (0.5% for holders vs 2% otherwise).
+  useEffect(() => {
+    if (!address) {
+      setIsHolder(false);
+      return;
+    }
+    fetch(`/api/sorio-balance?wallet=${address}`)
+      .then((r) => r.json())
+      .then((d) => setIsHolder(!!d.isHolder))
+      .catch(() => setIsHolder(false));
+  }, [address]);
+
   const period = plan ? periodLabel(plan.period_seconds) : "";
   const isOwnPlan = !!(
     address &&
@@ -61,15 +82,24 @@ export default function SubscribePage({
     address === plan.merchants.destination_wallet
   );
 
+  // Fee shown depends on whether the connected wallet is a $SORIO holder.
+  // Non-holder: the baked-in fee (amount - merchant_amount), i.e. 2%.
+  // Holder: 0.5% of the merchant amount (what the puller will actually charge).
+  const merchantUsd = plan ? plan.merchant_amount / 1_000_000 : 0;
+  const standardFeeUsd = plan ? (plan.amount - plan.merchant_amount) / 1_000_000 : 0;
+  const holderFeeUsd = plan ? (plan.merchant_amount * 0.005) / 1_000_000 : 0;
+  const effectiveFeeUsd = isHolder ? holderFeeUsd : standardFeeUsd;
+  const effectiveTotalUsd = merchantUsd + effectiveFeeUsd;
+
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <Navbar />
-      
+
       <div className="mx-auto max-w-5xl px-8 py-14 mt-12 md:mt-0">
         <Link href="/dashboard" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)]">← Dashboard</Link>
-        
+
         <div className="mx-auto grid max-w-auto grid-cols-1 gap-12 py-4 md:py-6 md:grid-cols-2">
-          {/* LEFT — context & trust */}
+          {/* LEFT - context & trust */}
           <div className="flex flex-col justify-center">
             {loading && <p className="text-[var(--muted)]">Loading…</p>}
             {notFound && <p className="text-[var(--muted)]">Plan not found.</p>}
@@ -93,7 +123,7 @@ export default function SubscribePage({
                     single time.
                   </Step>
                   <Step n="2" title={`Auto-renews each ${period}`}>
-                    ${(plan.amount / 1_000_000).toFixed(2)} is collected every {period},
+                    {usd(plan.amount / 1_000_000)} is collected every {period},
                     automatically.
                   </Step>
                   <Step n="3" title="Cancel anytime">
@@ -104,13 +134,13 @@ export default function SubscribePage({
             )}
           </div>
 
-          {/* RIGHT — checkout card */}
+          {/* RIGHT - checkout card */}
           {plan && (
             <div className="flex items-center">
               <div className="w-full rounded-2xl border border-[var(--border)] bg-[var(--card)] p-8 shadow-sm">
                 <p className="text-sm text-[var(--muted)]">{plan.name}</p>
                 <p className="mt-2 text-5xl font-semibold tracking-tight">
-                  ${(plan.amount / 1_000_000).toFixed(2)}
+                  {usd(effectiveTotalUsd)}
                   <span className="text-lg font-normal text-[var(--muted)]">
                     {" "}/ {period}
                   </span>
@@ -120,23 +150,44 @@ export default function SubscribePage({
 
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-[var(--muted)]">Subscription</span>
-                  <span className="font-medium">
-                    ${(plan.merchant_amount / 1_000_000).toFixed(2)}
-                  </span>
+                  <span className="font-medium">{usd(merchantUsd)}</span>
                 </div>
                 <div className="mt-2 flex items-center justify-between text-sm">
-                  <span className="text-[var(--muted)]">Service fee</span>
+                  <span className="text-[var(--muted)]">
+                    Service fee
+                    {isHolder && (
+                      <span className="ml-2 rounded-full bg-[var(--primary)] px-2 py-0.5 text-[10px] font-semibold text-white">
+                        $SORIO 0.5%
+                      </span>
+                    )}
+                  </span>
                   <span className="font-medium">
-                    ${((plan.amount - plan.merchant_amount) / 1_000_000).toFixed(2)}
+                    {isHolder && standardFeeUsd > 0 ? (
+                      <>
+                        <span className="mr-1.5 text-[var(--muted)] line-through">{usd(standardFeeUsd)}</span>
+                        {usd(effectiveFeeUsd)}
+                      </>
+                    ) : (
+                      usd(effectiveFeeUsd)
+                    )}
                   </span>
                 </div>
                 <div className="my-3 h-px bg-[var(--border)]" />
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-[var(--muted)]">Total per {period}</span>
-                  <span className="font-semibold">
-                    ${(plan.amount / 1_000_000).toFixed(2)}
-                  </span>
+                  <span className="font-semibold">{usd(effectiveTotalUsd)}</span>
                 </div>
+
+                {isHolder ? (
+                  <p className="mt-3 text-xs text-[var(--accent)]">
+                    You hold $SORIO - discounted 0.5% fee applied.
+                  </p>
+                ) : address && standardFeeUsd > holderFeeUsd ? (
+                  <p className="mt-3 text-xs text-[var(--muted)]">
+                    Hold $SORIO and pay 0.5% instead of 2% -
+                    you&apos;d save {usd(standardFeeUsd - holderFeeUsd)} each {period} on this plan.
+                  </p>
+                ) : null}
 
                 <button
                   disabled={!address || alreadySubscribed || subscribing || done || isOwnPlan}
@@ -203,8 +254,8 @@ export default function SubscribePage({
                       </div>
                       {parseInt(times) > 0 && (
                         <p className="mt-2 text-xs text-[var(--muted)]">
-                          ${(plan.amount / 1_000_000).toFixed(2)} × {parseInt(times)} ={" "}
-                          ${((plan.amount * parseInt(times)) / 1_000_000).toFixed(2)} total, then auto-stops.
+                          {usd(effectiveTotalUsd)} × {parseInt(times)} ={" "}
+                          {usd(effectiveTotalUsd * parseInt(times))} total, then auto-stops.
                         </p>
                       )}
                     </div>
