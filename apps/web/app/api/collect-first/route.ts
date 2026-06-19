@@ -9,6 +9,11 @@ import {
   TOKEN_PROGRAM,
 } from "../../lib/solana-engine";
 import { verifyAuth, AuthError } from "../../lib/verify-auth";
+import {
+  SORIO_MINT_ADDRESS,
+  TOKEN_2022_PROGRAM,
+  SORIO_FEE_DISCOUNT_THRESHOLD,
+} from "../../lib/config";
 
 export const runtime = "nodejs";
 
@@ -98,7 +103,25 @@ export async function POST(req: NextRequest) {
     // Amounts.
     const total = BigInt(plan.amount);
     const merchantAmount = plan.merchant_amount != null ? BigInt(plan.merchant_amount) : total;
-    const feeAmount = total - merchantAmount;
+
+    // $SORIO holder discount: if the SUBSCRIBER holds >= threshold, charge a
+    // 0.5% fee (of merchant amount) instead of the baked-in 2%. The puller can
+    // pull less than the authorized total, so we just pull a smaller fee.
+    let feeAmount = total - merchantAmount; // default: baked-in fee (2%)
+    try {
+      const [sorioAta] = await findAssociatedTokenPda({
+        owner: address(sub.subscriber_wallet),
+        mint: address(SORIO_MINT_ADDRESS),
+        tokenProgram: address(TOKEN_2022_PROGRAM),
+      });
+      const b = await client.rpc.getTokenAccountBalance(sorioAta).send();
+      if (BigInt(b.value.amount) >= SORIO_FEE_DISCOUNT_THRESHOLD) {
+        feeAmount = (merchantAmount * 50n) / 10000n; // 0.5% = 50/10000
+        console.log("collect-first: subscriber is $SORIO holder -> discounted fee", feeAmount.toString());
+      }
+    } catch {
+      // no $SORIO account / unreadable -> not a holder, keep default fee
+    }
 
     const [merchantAta] = await findAssociatedTokenPda({
       owner: address(destWallet),
@@ -111,12 +134,33 @@ export async function POST(req: NextRequest) {
       tokenProgram: TOKEN_PROGRAM,
     });
 
+    // Double-fee guard: reuse a fee already pulled this cycle (a prior partial
+    // failure leaves a row with fee_tx set and tx_signature null).
+    let feeSig: string | null = null;
+    let feeAlreadyPulled = false;
+    {
+      const { data: pendingFee } = await db
+        .from("billing_history")
+        .select("fee_tx")
+        .eq("subscription_id", sub.id)
+        .not("fee_tx", "is", null)
+        .is("tx_signature", null)
+        .order("attempted_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (pendingFee?.fee_tx) {
+        feeSig = pendingFee.fee_tx;
+        feeAlreadyPulled = true;
+        console.log("collect-first: fee already pulled this cycle, skipping fee pull", feeSig);
+      }
+    }
+
     let ok = false;
     let sig: string | null = null;
     let reason: string | null = null;
     try {
-      // Pull #1: FEE first (customer -> fee wallet).
-      if (feeAmount > 0n) {
+      // Pull #1: FEE first (customer -> fee wallet) — unless already pulled.
+      if (feeAmount > 0n && !feeAlreadyPulled) {
         const feeRes = await collectPayment(client, puller, {
           amount: feeAmount,
           delegator: address(sub.subscriber_wallet),
@@ -124,7 +168,8 @@ export async function POST(req: NextRequest) {
           planPda: address(plan.plan_pda),
           receiverAta: feeAta,
         });
-        console.log("collect-first FEE:", feeRes.signature);
+        feeSig = feeRes.signature;
+        console.log("collect-first FEE:", feeSig);
       }
       // Pull #2: merchant's share (customer -> merchant).
       const res = await collectPayment(client, puller, {
@@ -142,12 +187,13 @@ export async function POST(req: NextRequest) {
       console.log("collect-first failed:", reason);
     }
 
-    // Record the attempt.
+    // Record the attempt (fee_tx stored even on partial failure for the guard).
     await db.from("billing_history").insert({
       subscription_id: sub.id,
       amount: plan.amount,
       status: ok ? "success" : "failed",
       tx_signature: sig,
+      fee_tx: feeSig,
       failure_reason: reason,
     });
 
