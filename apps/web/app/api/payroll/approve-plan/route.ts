@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     // Load the payroll_item + its payroll (for the schedule + owner check).
     const { data: item, error: iErr } = await db
       .from("payroll_items")
-      .select("id, employee_wallet, amount, status, plan_pda, payrolls(period_seconds, employer_wallet)")
+      .select("id, employee_wallet, amount, status, plan_pda, payrolls(period_seconds, employer_wallet, fee_percent)")
       .eq("id", itemId)
       .single();
     if (iErr) throw iErr;
@@ -68,7 +68,8 @@ export async function POST(req: NextRequest) {
     const { client, signer: platform } = await makeClient(pullerBytes);
 
     const salary = BigInt(item.amount);
-    const feePercent = Number(process.env.PLATFORM_FEE_PERCENT ?? "2");
+    // Use the rate locked on the payroll at creation ($SORIO holder discount).
+    const feePercent = Number((item.payrolls as any)?.fee_percent ?? 2);
     const total = salary + (salary * BigInt(Math.round(feePercent * 100))) / 10000n;
 
     const periodSeconds = (item.payrolls as any)?.period_seconds ?? 2592000;
