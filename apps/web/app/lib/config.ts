@@ -40,3 +40,26 @@ export function explorerTx(sig: string): string {
   const q = NETWORK === "mainnet" ? "" : `?cluster=${CONFIG[NETWORK].explorerCluster}`;
   return `https://explorer.solana.com/tx/${sig}${q}`;
 }
+
+// ===== $SORIO token — holder fee-discount config =====
+// $SORIO is a Token-2022 mint (different program than classic SPL / USDC).
+export const SORIO_MINT_ADDRESS =
+  process.env.NEXT_PUBLIC_SORIO_MINT ??
+  "A6VcXrUUYjNiR8RkHCRNu8zuxWUMnhMWoX11j6Bapump";
+
+// Token-2022 program (NOT the classic token program USDC uses).
+export const TOKEN_2022_PROGRAM =
+  "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+
+// $SORIO has 6 decimals (confirmed on Solscan).
+export const SORIO_DECIMALS = 6;
+
+// Minimum $SORIO an employer must hold for the discounted fee (in base units).
+// 20,000 tokens × 10^6. Override with SORIO_FEE_DISCOUNT_THRESHOLD (token count).
+export const SORIO_FEE_DISCOUNT_THRESHOLD =
+  BigInt(process.env.SORIO_FEE_DISCOUNT_THRESHOLD ?? "20000") *
+  BigInt(10) ** BigInt(SORIO_DECIMALS);
+
+// Fee rates (percent): holders pay less.
+export const FEE_PERCENT_STANDARD = 2;
+export const FEE_PERCENT_HOLDER = 0.5;
