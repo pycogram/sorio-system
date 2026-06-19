@@ -12,8 +12,6 @@ import { verifyAuth, AuthError } from "../../../lib/verify-auth";
 
 export const runtime = "nodejs";
 
-const FEE_PERCENT = 2;
-
 // Pay the FIRST salary immediately when an employer chooses "Pay now" on
 // approval. Best-effort and idempotent.
 export async function POST(req: NextRequest) {
@@ -44,7 +42,7 @@ export async function POST(req: NextRequest) {
 
     const { data: item, error: iErr } = await db
       .from("payroll_items")
-      .select("id, employee_wallet, amount, status, plan_pda, max_payments, payrolls(employer_wallet, period_seconds, token_mint)")
+      .select("id, employee_wallet, amount, status, plan_pda, max_payments, payrolls(employer_wallet, period_seconds, token_mint, fee_percent)")
       .eq("id", itemId)
       .single();
     if (iErr || !item) {
@@ -85,7 +83,9 @@ export async function POST(req: NextRequest) {
     }
 
     const salary = BigInt(item.amount);
-    const fee = (salary * BigInt(Math.round(FEE_PERCENT * 100))) / 10000n;
+    // Use the rate locked on the payroll at creation ($SORIO holder discount).
+    const feePercent = Number(pr?.fee_percent ?? 2);
+    const fee = (salary * BigInt(Math.round(feePercent * 100))) / 10000n;
     const totalNeeded = salary + fee;
 
     const [employerAta] = await findAssociatedTokenPda({
@@ -115,11 +115,32 @@ export async function POST(req: NextRequest) {
       tokenProgram: TOKEN_PROGRAM,
     });
 
+    // Double-fee guard: reuse a fee already pulled this cycle (a prior partial
+    // failure leaves a row with fee_tx set and salary_tx null).
+    let feeSig: string | null = null;
+    let feeAlreadyPulled = false;
+    {
+      const { data: pendingFee } = await db
+        .from("payroll_history")
+        .select("fee_tx")
+        .eq("payroll_item_id", item.id)
+        .not("fee_tx", "is", null)
+        .is("salary_tx", null)
+        .order("paid_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (pendingFee?.fee_tx) {
+        feeSig = pendingFee.fee_tx;
+        feeAlreadyPulled = true;
+        console.log("payroll collect-first: fee already pulled this cycle, skipping", feeSig);
+      }
+    }
+
     let ok = false;
     let sig: string | null = null;
     let reason: string | null = null;
     try {
-      if (fee > 0n) {
+      if (fee > 0n && !feeAlreadyPulled) {
         const feeRes = await collectPayment(client, puller, {
           amount: fee,
           delegator: address(employer),
@@ -127,7 +148,8 @@ export async function POST(req: NextRequest) {
           planPda: address(item.plan_pda),
           receiverAta: feeAta,
         });
-        console.log("payroll collect-first FEE:", feeRes.signature);
+        feeSig = feeRes.signature;
+        console.log("payroll collect-first FEE:", feeSig);
       }
       const salRes = await collectPayment(client, puller, {
         amount: salary,
@@ -150,7 +172,7 @@ export async function POST(req: NextRequest) {
       fee: Number(fee),
       status: ok ? "success" : "failed",
       salary_tx: sig,
-      fee_tx: null,
+      fee_tx: feeSig,
       failure_reason: reason,
     });
 
