@@ -415,6 +415,25 @@ export default {
           });
           if (phErr) console.log(`   payroll_history insert error:`, phErr.message);
 
+          // Auto-retire: after 3 consecutive failed attempts (no success in
+          // between), pause this payroll item so we stop retrying one that
+          // can't pay. Resumable later by setting status back to 'active'.
+          if (!ok) {
+            const { data: recentP } = await db
+              .from("payroll_history")
+              .select("status")
+              .eq("payroll_item_id", i.id)
+              .order("paid_at", { ascending: false })
+              .limit(3);
+            const last3P = recentP ?? [];
+            const threeStraightFailsP =
+              last3P.length >= 3 && last3P.every((r: any) => r.status === "failed");
+            if (threeStraightFailsP) {
+              await db.from("payroll_items").update({ status: "paused" }).eq("id", i.id);
+              console.log(`   payroll_item ${i.id}: 3 consecutive failures — paused`);
+            }
+          }
+
           // Advance schedule only on success — or complete if the cap is hit.
           if (ok) {
             if (i.max_payments != null) {
