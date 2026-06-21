@@ -219,7 +219,51 @@ const result = await client.subscriptions.instructions
     })
     .sendTransaction();
 
-  return { signature: result?.context?.signature ?? null };
+  const signature = result?.context?.signature ?? null;
+  if (!signature) {
+    // No signature came back -> nothing landed. Treat as failure.
+    throw new Error("collectPayment: no signature returned from sendTransaction");
+  }
+
+  // Confirm the tx actually landed on-chain (not just submitted).
+  const confirmed = await confirmSignature(client.rpc, signature);
+  if (!confirmed.ok) {
+    throw new Error(`collectPayment: tx not confirmed (${signature}): ${confirmed.reason}`);
+  }
+
+  return { signature };
+}
+
+// Poll a signature until confirmed/finalized or timeout.
+// Returns { ok: true } only if the tx confirmed WITHOUT an on-chain error.
+async function confirmSignature(
+  rpc: any,
+  signature: string,
+  opts: { timeoutMs?: number; intervalMs?: number } = {}
+): Promise<{ ok: boolean; reason?: string }> {
+  const timeoutMs = opts.timeoutMs ?? 30_000;
+  const intervalMs = opts.intervalMs ?? 1_500;
+  const start = Date.now();
+
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await rpc.getSignatureStatuses([signature]).send();
+      const st = res?.value?.[0];
+      if (st) {
+        if (st.err) {
+          return { ok: false, reason: `on-chain error: ${JSON.stringify(st.err)}` };
+        }
+        const status = st.confirmationStatus;
+        if (status === "confirmed" || status === "finalized") {
+          return { ok: true };
+        }
+      }
+    } catch {
+      // transient RPC hiccup -> keep polling until timeout
+    }
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  return { ok: false, reason: "confirmation timed out" };
 }
 
 export {
