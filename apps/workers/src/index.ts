@@ -207,6 +207,25 @@ export default {
       });
       if (histErr) console.log("   billing_history insert error:", histErr.message);
 
+      // Auto-retire: after 3 consecutive failed attempts (no success in
+      // between), pause the subscription so we stop retrying one that can't pay.
+      // Resumable later by setting status back to 'active'.
+      if (!ok) {
+        const { data: recent } = await db
+          .from("billing_history")
+          .select("status")
+          .eq("subscription_id", sub.id)
+          .order("attempted_at", { ascending: false })
+          .limit(3);
+        const last3 = recent ?? [];
+        const threeStraightFails =
+          last3.length >= 3 && last3.every((r: any) => r.status === "failed");
+        if (threeStraightFails) {
+          await db.from("subscriptions").update({ status: "paused" }).eq("id", sub.id);
+          console.log(`   subscription ${sub.id}: 3 consecutive failures — paused`);
+        }
+      }
+
       if (ok) {
         // If this successful pull reached the payment cap, complete the
         // subscription so it is never collected again. Otherwise advance.
