@@ -40,12 +40,12 @@ A pnpm monorepo:
 
 ## Products
 
-1. **Paylo Scribe** - merchant → customer recurring billing. Create plans, share
+1. **Sorio Scribe** - merchant → customer recurring billing. Create plans, share
    a subscribe link, get paid automatically each cycle.
-2. **Paylo Roll** - employer → employee payroll on the same rail. Add employees,
+2. **Sorio Roll** - employer → employee payroll on the same rail. Add employees,
    approve each on-chain, pay salaries automatically on a daily/weekly/monthly
    schedule.
-3. **Paylo API** - programmatic access for builders (planned).
+3. **Sorio API** - programmatic access for builders (planned).
 
 All run on the same engine; role assignment and UI differ.
 
@@ -59,8 +59,8 @@ dedicated provider for reliability.
 ## How it works
 
 Payments are authorized by the payer's own wallet and enforced on-chain by the
-Subscriptions Delegation Program. The approved amount is a hard ceiling - Paylo
-can never pull more than authorized, funds never touch Paylo's custody, and the
+Subscriptions Delegation Program. The approved amount is a hard ceiling - Sorio
+can never pull more than authorized, funds never touch Sorio's custody, and the
 payer can cancel (revoke) anytime, which takes effect immediately on-chain. A
 small platform fee is collected as a separate direct transfer, so fee splitting
 stays non-custodial.
