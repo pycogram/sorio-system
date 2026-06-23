@@ -22,7 +22,11 @@ const periodLabel = (s: number) =>
 // Format a USD amount; show extra precision for tiny (sub-cent) fees so they
 // don't round away to $0.00.
 function usd(n: number): string {
-  if (n > 0 && n < 0.01) return `$${n.toFixed(4)}`;
+  if (n <= 0) return "$0.00";
+  // Show 4 decimals whenever rounding to cents would hide a sub-cent amount,
+  // so a discounted total like $1.005 doesn't collapse to $1.00.
+  const rounded2 = Math.round(n * 100) / 100;
+  if (Math.abs(n - rounded2) >= 0.00001) return `$${n.toFixed(4)}`;
   return `$${n.toFixed(2)}`;
 }
 
