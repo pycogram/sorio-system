@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Navbar } from "../navbar";
+import { AppShell } from "../app-shell";
 import { useWallet } from "../providers";
 
 type Stats = {
@@ -41,7 +41,9 @@ export default function BonusPage() {
       .finally(() => setLoading(false));
   }, [address]);
 
-  const link = data ? `${typeof window !== "undefined" ? window.location.origin : "https://soriopay.com"}/?invite=${data.code}` : "";
+  const link = data
+    ? `${typeof window !== "undefined" ? window.location.origin : "https://soriopay.com"}/?invite=${data.code}`
+    : "";
 
   const copy = async () => {
     if (!link) return;
@@ -50,7 +52,7 @@ export default function BonusPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      /* clipboard blocked — user can select manually */
+      /* clipboard blocked - user can select manually */
     }
   };
 
@@ -59,90 +61,84 @@ export default function BonusPage() {
   const reachedMin = accrued >= threshold;
 
   return (
-    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <Navbar />
-      <div className="mx-auto max-w-3xl px-8 py-14 mt-12 md:mt-0">
-        <h1 className="text-3xl font-semibold tracking-tight">Bonus</h1>
-        <p className="mt-2 text-[var(--muted)] leading-relaxed">
-          Invite people to Sorio and earn 0.4% of every payment they make — subscriptions and payroll.
-        </p>
+    <AppShell>
+      <h1 className="text-3xl font-semibold tracking-tight">Bonus</h1>
+      <p className="mt-2 text-[var(--muted)] leading-relaxed">
+        Invite people to Sorio and earn 0.4% of every payment they make.
+      </p>
 
-        {!address && (
-          <p className="mt-8 text-[var(--muted)]">Connect your wallet to get your referral link.</p>
-        )}
+      {!address && (
+        <p className="mt-8 text-[var(--muted)]">Connect your wallet to get your referral link.</p>
+      )}
 
-        {address && loading && <p className="mt-8 text-[var(--muted)]">Loading…</p>}
-        {err && <p className="mt-8 text-sm text-red-500">Error: {err}</p>}
+      {address && loading && <p className="mt-8 text-[var(--muted)]">Loading…</p>}
+      {err && <p className="mt-8 text-sm text-red-500">Error: {err}</p>}
 
-        {data && (
-          <div className="mt-8 space-y-8">
-            {/* Referral link */}
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6">
-              <p className="text-sm font-medium text-[var(--muted)]">Your referral link</p>
-              <div className="mt-3 flex items-center gap-2">
-                <input
-                  readOnly
-                  value={link}
-                  onFocus={(e) => e.currentTarget.select()}
-                  className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm outline-none"
-                />
-                <button
-                  onClick={copy}
-                  className="rounded-lg bg-[var(--btn)] px-4 py-2.5 text-sm font-medium text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)]"
-                >
-                  {copied ? "Copied ✓" : "Copy"}
-                </button>
-              </div>
-              <p className="mt-2 text-xs text-[var(--muted)]">
-                Your wallet address is never shown — the link uses a private code.
-              </p>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-4">
-              <Card label="People invited" value={data.stats.confirmedCount} sub={data.stats.pendingCount > 0 ? `${data.stats.pendingCount} pending` : undefined} />
-              <Card label="Earned (unpaid)" value={usd(data.stats.accruedBaseUnits)} />
-              <Card label="Paid out" value={usd(data.stats.paidBaseUnits)} />
-            </div>
-
-            {/* Holder / payout status */}
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6">
-              <p className="text-sm font-medium">Payout status</p>
-              <ul className="mt-3 space-y-2 text-sm text-[var(--muted)]">
-                <li className="flex items-center gap-2">
-                  <Dot ok={reachedMin} />
-                  {reachedMin
-                    ? `You've reached the $${data.payoutThresholdUsd} minimum.`
-                    : `Earn ${usd(threshold - accrued)} more to reach the $${data.payoutThresholdUsd} payout minimum.`}
-                </li>
-                <li className="flex items-center gap-2">
-                  <Dot ok={data.isHolder} />
-                  {data.isHolder
-                    ? "You hold 20,000+ $SORIO — eligible for payout."
-                    : "Hold 20,000 $SORIO to be eligible for payout."}
-                </li>
-              </ul>
-              {reachedMin && data.isHolder && (
-                <p className="mt-3 text-xs text-[var(--accent)]">
-                  You&apos;re eligible. Payouts are sent manually from the bonus wallet.
-                </p>
-              )}
-            </div>
-
-            {/* How it works */}
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6">
-              <p className="text-sm font-medium">How it works</p>
-              <ol className="mt-3 space-y-2 text-sm text-[var(--muted)] list-decimal list-inside">
-                <li>Share your link. Anyone who joins through it becomes your referral.</li>
-                <li>When they pay through Sorio (subscriptions or payroll), you earn 0.4% of each payment.</li>
-                <li>Earnings accrue continuously, as long as they keep using Sorio.</li>
-                <li>Once you&apos;ve earned ${data.payoutThresholdUsd}+ and hold 20,000 $SORIO, you&apos;re paid from the bonus wallet.</li>
-              </ol>
+      {data && (
+        <div className="mt-8 space-y-8">
+          {/* Referral link */}
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6">
+            <p className="text-sm font-medium text-[var(--muted)]">Your referral link</p>
+            <div className="mt-3 flex items-center gap-2">
+              <input
+                readOnly
+                value={link}
+                onFocus={(e) => e.currentTarget.select()}
+                className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm outline-none"
+              />
+              <button
+                onClick={copy}
+                className="rounded-lg bg-[var(--btn)] px-4 py-2.5 text-sm font-medium text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)]"
+              >
+                {copied ? "Copied ✓" : "Copy"}
+              </button>
             </div>
           </div>
-        )}
-      </div>
-    </main>
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4">
+            <Card label="People invited" value={data.stats.confirmedCount} sub={data.stats.pendingCount > 0 ? `${data.stats.pendingCount} pending` : undefined} />
+            <Card label="Earned (unpaid)" value={usd(data.stats.accruedBaseUnits)} />
+            <Card label="Paid out" value={usd(data.stats.paidBaseUnits)} />
+          </div>
+
+          {/* Holder / payout status */}
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6">
+            <p className="text-sm font-medium">Payout status</p>
+            <ul className="mt-3 space-y-2 text-sm text-[var(--muted)]">
+              <li className="flex items-center gap-2">
+                <Dot ok={reachedMin} />
+                {reachedMin
+                  ? `You've reached the $${data.payoutThresholdUsd} minimum.`
+                  : `Earn ${usd(threshold - accrued)} more to reach the $${data.payoutThresholdUsd} payout minimum.`}
+              </li>
+              <li className="flex items-center gap-2">
+                <Dot ok={data.isHolder} />
+                {data.isHolder
+                  ? "You hold 20,000+ $SORIO - eligible for payout."
+                  : "Hold 20,000 $SORIO to be eligible for payout."}
+              </li>
+            </ul>
+            {reachedMin && data.isHolder && (
+              <p className="mt-3 text-xs text-[var(--accent)]">
+                You&apos;re eligible. Payouts are sent manually from the bonus wallet.
+              </p>
+            )}
+          </div>
+
+          {/* How it works */}
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6">
+            <p className="text-sm font-medium">How it works</p>
+            <ol className="mt-3 space-y-2 text-sm text-[var(--muted)] list-decimal list-inside">
+              <li>Share your link. Anyone who joins through it becomes your referral.</li>
+              <li>When they pay through Sorio (subscriptions or payroll), you earn 0.4% of each payment.</li>
+              <li>Earnings accrue continuously, as long as they keep using Sorio.</li>
+              <li>Once you&apos;ve earned ${data.payoutThresholdUsd}+ and hold 20,000 $SORIO, you&apos;re paid from the bonus wallet.</li>
+            </ol>
+          </div>
+        </div>
+      )}
+    </AppShell>
   );
 }
 
