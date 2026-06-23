@@ -9,6 +9,7 @@ import {
   TOKEN_PROGRAM,
 } from "../../../lib/solana-engine";
 import { verifyAuth, AuthError } from "../../../lib/verify-auth";
+import { accrueReferral } from "../../../lib/referral-accrue";
 
 export const runtime = "nodejs";
 
@@ -179,6 +180,10 @@ export async function POST(req: NextRequest) {
     if (!ok) {
       return NextResponse.json({ paid: false, reason });
     }
+
+    // Referral accrual: if the employer was referred, accrue 0.4% of the salary
+    // to their inviter. Non-fatal. (Employer is the payer/invitee for payroll.)
+    await accrueReferral(db, employer, salary);
 
     const nowIso = new Date().toISOString();
     if (item.max_payments != null && item.max_payments <= 1) {
