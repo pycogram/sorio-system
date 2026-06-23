@@ -23,6 +23,7 @@ import { findAssociatedTokenPda } from "@solana-program/token";
 import { getProvider } from "../../providers";
 import { USDC_MINT_ADDRESS, RPC_URL } from "../../lib/config";
 import { signRequest } from "../../lib/sign-request";
+import { getStoredRef } from "../../lib/referral";
 
 const USDC_MINT = address(USDC_MINT_ADDRESS);
 const TOKEN_PROGRAM = address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
@@ -143,6 +144,7 @@ export async function runSubscribe(opts: {
   });
 
   // Save to Supabase so the collection worker can find it.
+  const inviteCode = getStoredRef();
   const saveRes = await fetch("/api/subscribe", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -151,6 +153,7 @@ export async function runSubscribe(opts: {
       subscriberWallet: subscriberAddr,
       subscriptionPda,
       maxPayments: opts.maxPayments ?? null,
+      inviteCode,
     }),
   });
   const saveData = await saveRes.json().catch(() => ({}));
