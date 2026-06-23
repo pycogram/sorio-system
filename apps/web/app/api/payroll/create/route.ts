@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient as createDb } from "@supabase/supabase-js";
 import { address } from "@solana/kit";
 import { makeClient, findAssociatedTokenPda } from "../../../lib/solana-engine";
+import { resolveInviteCode } from "../../../lib/invite-code";
 import {
   USDC_MINT_ADDRESS,
   SORIO_MINT_ADDRESS,
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
     const body = await req.json();
-    const { employerWallet, name, periodSeconds, employees } = body;
+    const { employerWallet, name, periodSeconds, employees, inviteCode } = body;
 
     if (!employerWallet || !name || !periodSeconds || !Array.isArray(employees) || employees.length === 0) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -81,6 +82,23 @@ export async function POST(req: Request) {
 
     const { error: iErr } = await supabase.from("payroll_items").insert(items);
     if (iErr) throw iErr;
+
+    // Record a pending referral if the employer arrived via an invite code.
+    // The employer is the payer (invitee) for payroll. Resolve code -> inviter
+    // server-side. Never let referral recording break payroll creation.
+    try {
+      if (inviteCode && typeof inviteCode === "string") {
+        const inviter = await resolveInviteCode(supabase, inviteCode);
+        if (inviter && inviter !== employerWallet) {
+          await supabase.from("referrals").upsert(
+            { inviter_wallet: inviter, invitee_wallet: employerWallet, status: "pending" },
+            { onConflict: "invitee_wallet", ignoreDuplicates: true }
+          );
+        }
+      }
+    } catch (e: any) {
+      console.log("referral record (non-fatal):", e?.message ?? e);
+    }
 
     return NextResponse.json({ payrollId: payroll.id, feePercent });
   } catch (e: any) {
