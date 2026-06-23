@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Navbar } from "../../navbar";
 import { useWallet } from "../../providers";
 import { signRequest } from "../../lib/sign-request"; 
+import { getStoredRef } from "../../lib/referral"; 
 
 type Employee = { wallet: string; amount: string; times: string };
 
@@ -56,6 +57,7 @@ export default function NewPayrollPage() {
           employerWallet: address,
           name: name.trim(),
           periodSeconds: period,
+          inviteCode: getStoredRef(),
           employees: employees.map((e) => ({
             wallet: e.wallet.trim(),
             amount: Math.round(parseFloat(e.amount) * 1_000_000),
