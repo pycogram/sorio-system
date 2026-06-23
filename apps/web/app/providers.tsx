@@ -1,6 +1,7 @@
 "use client";
 import Image from "next/image";
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { captureRefFromUrl } from "./lib/referral";
 
 type WalletKind = "phantom" | "solflare";
 
@@ -149,6 +150,8 @@ export function Providers({
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [bound]);
+
+  useEffect(() => { captureRefFromUrl(); }, []);
 
   // Connect to a specific wallet kind (called after the user picks one).
   const connectTo = useCallback(async (kind: WalletKind) => {
