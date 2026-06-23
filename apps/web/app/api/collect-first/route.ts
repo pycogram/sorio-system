@@ -9,6 +9,7 @@ import {
   TOKEN_PROGRAM,
 } from "../../lib/solana-engine";
 import { verifyAuth, AuthError } from "../../lib/verify-auth";
+import { accrueReferral } from "../../lib/referral-accrue";
 import {
   SORIO_MINT_ADDRESS,
   TOKEN_2022_PROGRAM,
@@ -201,6 +202,10 @@ export async function POST(req: NextRequest) {
       // Soft failure — worker will retry. Leave next_collection_at as-is (now).
       return NextResponse.json({ collected: false, reason });
     }
+
+    // Referral accrual: if the subscriber was referred, accrue 0.4% of the
+    // merchant amount to their inviter. Non-fatal (helper swallows errors).
+    await accrueReferral(db, sub.subscriber_wallet, merchantAmount);
 
     // Success: advance, or complete if the cap is already reached.
     const nowIso = new Date().toISOString();
