@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
-    const { planPda, subscriberWallet, subscriptionPda, maxPayments } = await req.json();
+    const { planPda, subscriberWallet, subscriptionPda, maxPayments, inviteCode } = await req.json();
     if (!planPda || !subscriberWallet || !subscriptionPda) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
@@ -40,6 +40,23 @@ export async function POST(req: NextRequest) {
       .select("id")
       .single();
     if (sErr) throw sErr;
+
+    // Record a pending referral if this subscriber arrived via an invite code.
+    // Resolve the code -> inviter wallet server-side (keeps inviter address
+    // private). Never let referral recording break the subscribe flow.
+    try {
+      if (inviteCode && typeof inviteCode === "string") {
+        const inviter = await resolveInviteCode(db, inviteCode);
+        if (inviter && inviter !== subscriberWallet) {
+          await db.from("referrals").upsert(
+            { inviter_wallet: inviter, invitee_wallet: subscriberWallet, status: "pending" },
+            { onConflict: "invitee_wallet", ignoreDuplicates: true }
+          );
+        }
+      }
+    } catch (e: any) {
+      console.log("referral record (non-fatal):", e?.message ?? e);
+    }
 
     return NextResponse.json({ subscriptionId: sub.id });
   } catch (e: any) {
