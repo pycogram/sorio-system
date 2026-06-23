@@ -22,6 +22,31 @@ const SORIO_MINT = "A6VcXrUUYjNiR8RkHCRNu8zuxWUMnhMWoX11j6Bapump";
 const SORIO_TOKEN_2022 = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
 const SORIO_THRESHOLD = 20000n * 1_000_000n; // 20,000 $SORIO (6 decimals)
 
+// Referral reward: 0.4% of the payment amount. Duplicated here because the
+// worker can't import from apps/web/app/lib. Keep in sync with referral-accrue.ts.
+const REFERRAL_RATE_BPS = 40n; // 0.4%
+async function accrueReferral(db: any, payerWallet: string, amountBaseUnits: bigint): Promise<void> {
+  try {
+    const { data: ref } = await db
+      .from("referrals")
+      .select("id, status, accrued_usd")
+      .eq("invitee_wallet", payerWallet)
+      .maybeSingle();
+    if (!ref) return;
+    const reward = (amountBaseUnits * REFERRAL_RATE_BPS) / 10000n;
+    if (reward <= 0n) return;
+    const newAccrued = BigInt(ref.accrued_usd ?? 0) + reward;
+    const update: Record<string, any> = { accrued_usd: Number(newAccrued) };
+    if (ref.status !== "confirmed") {
+      update.status = "confirmed";
+      update.confirmed_at = new Date().toISOString();
+    }
+    await db.from("referrals").update(update).eq("id", ref.id);
+  } catch (e: any) {
+    console.log("   accrueReferral error (non-fatal):", e?.message ?? e);
+  }
+}
+
 interface Env {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
@@ -206,6 +231,10 @@ export default {
         failure_reason: reason,
       });
       if (histErr) console.log("   billing_history insert error:", histErr.message);
+
+      // Referral accrual: on success, accrue 0.4% of the merchant amount to the
+      // subscriber's inviter (if any). Non-fatal.
+      if (ok) await accrueReferral(db, sub.subscriber_wallet, merchantAmount);
 
       // Auto-retire: after 3 consecutive failed attempts (no success in
       // between), pause the subscription so we stop retrying one that can't pay.
@@ -414,6 +443,10 @@ export default {
             failure_reason: reason,
           });
           if (phErr) console.log(`   payroll_history insert error:`, phErr.message);
+
+          // Referral accrual: on success, accrue 0.4% of the salary to the
+          // employer's inviter (if any). Non-fatal.
+          if (ok) await accrueReferral(db, employer, salary);
 
           // Auto-retire: after 3 consecutive failed attempts (no success in
           // between), pause this payroll item so we stop retrying one that
