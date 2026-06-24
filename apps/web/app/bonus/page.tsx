@@ -77,20 +77,37 @@ export default function BonusPage() {
       {data && (
         <div className="mt-8 space-y-8">
           {/* Referral link */}
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 py-6 md:p-6">
             <p className="text-sm font-medium text-[var(--muted)]">Your referral link</p>
-            <div className="mt-3 flex items-center gap-2">
+            <div className="w-[100%] mt-3 flex items-center gap-2">
               <input
                 readOnly
                 value={link}
                 onFocus={(e) => e.currentTarget.select()}
-                className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm outline-none"
+                className="w-[80%] flex-1 rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm outline-none"
               />
               <button
                 onClick={copy}
-                className="rounded-lg bg-[var(--btn)] px-4 py-2.5 text-sm font-medium text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)]"
+                aria-label={copied ? "Copied" : "Copy link"}
+                title={copied ? "Copied" : "Copy link"}
+                className="flex w-fit items-center gap-1.5 rounded-lg bg-[var(--btn)] px-3 md:px-4 py-2.5 text-sm font-medium text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)]"
               >
-                {copied ? "Copied ✓" : "Copy"}
+                {copied ? (
+                  <>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                    Copy
+                  </>
+                )}
               </button>
             </div>
           </div>
