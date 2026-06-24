@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createDb } from "@supabase/supabase-js";
+import { resolveInviteCode } from "../../lib/invite-code";
 
 export const runtime = "nodejs";
 
