@@ -16,6 +16,13 @@ type Metrics = {
   volume: { totalBaseUnits: number; note?: string };
   health: { successRatePct: number | null; totalSuccess: number; totalFailed: number };
   recurring: { monthlyBaseUnits: number };
+  bonus: {
+    walletUsdc: string | null;
+    walletSol: string | null;
+    paidOutBaseUnits: number;
+    pendingAccruedBaseUnits: number;
+    pendingRequests: number;
+  };
 };
 
 type SubRow = {
@@ -193,8 +200,19 @@ export default function AdminPage() {
             <section>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">Money</h2>
               <div className="mt-3 grid grid-cols-2 gap-4">
-                <Card label="Revenue - fee wallet USDC (current)" value={metrics.money.feeWalletUsdc ?? "-"} />
+                <Card label="Revenue - fee wallet USDC (current)" value={metrics.money.feeWalletUsdc != null ? `$${metrics.money.feeWalletUsdc}` : "-"} />
                 <Card label="Collector SOL (remaining / runway)" value={metrics.money.collectorSol ?? "-"} />
+              </div>
+            </section>
+
+            <section>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">Bonus / Referrals</h2>
+              <div className="mt-3 grid grid-cols-3 gap-4">
+                <Card label="Bonus wallet USDC" value={metrics.bonus.walletUsdc != null ? `$${metrics.bonus.walletUsdc}` : "-"} />
+                <Card label="Bonus wallet SOL (gas)" value={metrics.bonus.walletSol ?? "-"} />
+                <Card label="Pending requests" value={metrics.bonus.pendingRequests} />
+                <Card label="Paid out (lifetime)" value={usd(metrics.bonus.paidOutBaseUnits)} />
+                <Card label="Owed to referrers" value={usd(metrics.bonus.pendingAccruedBaseUnits)} />
               </div>
             </section>
 
