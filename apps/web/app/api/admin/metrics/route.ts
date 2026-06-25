@@ -156,6 +156,55 @@ export async function GET(req: NextRequest) {
       // chain reads unavailable -> leave nulls, DB stats still returned
     }
 
+    // --- Bonus / referral payout operation ---
+    // DB: total paid out, total still owed (accrued), pending request count.
+    let bonusPaidOut = 0;
+    {
+      const { data } = await db
+        .from("payout_requests")
+        .select("paid_amount_usd")
+        .eq("status", "paid");
+      bonusPaidOut = (data ?? []).reduce((s: number, r: any) => s + Number(r.paid_amount_usd ?? 0), 0);
+    }
+    let bonusPendingAccrued = 0;
+    {
+      const { data } = await db.from("referrals").select("accrued_usd");
+      bonusPendingAccrued = (data ?? []).reduce((s: number, r: any) => s + Number(r.accrued_usd ?? 0), 0);
+    }
+    const { count: bonusPendingRequests } = await db
+      .from("payout_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending");
+
+    // On-chain: bonus wallet USDC + SOL (the float you pay out from).
+    let bonusWalletUsdc: string | null = null;
+    let bonusWalletSol: string | null = null;
+    try {
+      if (process.env.BONUS_WALLET_SECRET) {
+        const bonusBytes = new Uint8Array(JSON.parse(process.env.BONUS_WALLET_SECRET));
+        const { client: bonusClient, signer: bonus } = await makeClient(bonusBytes);
+        try {
+          const [bonusAta] = await findAssociatedTokenPda({
+            owner: bonus.address,
+            mint: address(USDC_MINT_ADDRESS),
+            tokenProgram: TOKEN_PROGRAM,
+          });
+          const bal = await bonusClient.rpc.getTokenAccountBalance(bonusAta).send();
+          bonusWalletUsdc = bal.value.uiAmountString ?? null;
+        } catch {
+          bonusWalletUsdc = null;
+        }
+        try {
+          const bal = await bonusClient.rpc.getBalance(bonus.address).send();
+          bonusWalletSol = (Number(bal.value) / 1_000_000_000).toFixed(4);
+        } catch {
+          bonusWalletSol = null;
+        }
+      }
+    } catch {
+      // bonus reads unavailable -> leave nulls
+    }
+
     return NextResponse.json({
       subscriptions,
       payroll: { items: payrollItems, payrolls: payrollCount ?? 0 },
@@ -175,6 +224,13 @@ export async function GET(req: NextRequest) {
       },
       recurring: {
         monthlyBaseUnits: mrrBaseUnits,       // active subs normalized to monthly
+      },
+      bonus: {
+        walletUsdc: bonusWalletUsdc,          // bonus wallet USDC (pay-out float)
+        walletSol: bonusWalletSol,            // bonus wallet SOL (gas runway)
+        paidOutBaseUnits: bonusPaidOut,       // lifetime referral payouts sent
+        pendingAccruedBaseUnits: bonusPendingAccrued, // owed to referrers, unpaid
+        pendingRequests: bonusPendingRequests ?? 0,   // payout requests waiting
       },
     });
   } catch (e: any) {
