@@ -39,6 +39,14 @@ type ItemRow = {
   lastFailure: string | null;
 };
 
+type PayoutRow = {
+  id: string;
+  inviterWallet: string;
+  requestedAmount: number;
+  currentAccrued: number;
+  isHolder: boolean;
+  requestedAt: string;
+};
 const usd = (baseUnits: number) =>
   `$${(baseUnits / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
@@ -49,6 +57,7 @@ export default function AdminPage() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [subs, setSubs] = useState<SubRow[]>([]);
   const [items, setItems] = useState<ItemRow[]>([]);
+  const [payouts, setPayouts] = useState<PayoutRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -73,11 +82,42 @@ export default function AdminPage() {
       if (!lRes.ok) throw new Error(lData.error ?? "list failed");
       setSubs(lData.subscriptions ?? []);
       setItems(lData.payrollItems ?? []);
+      // Payout requests
+      const pAuth = await signRequest("admin-referral-payout-list", {});
+      const pQs = new URLSearchParams({ wallet: pAuth.wallet, timestamp: String(pAuth.timestamp), signature: pAuth.signature });
+      const pRes = await fetch(`/api/admin/referral-payout-list?${pQs}`);
+      const pData = await pRes.json();
+      if (!pRes.ok) throw new Error(pData.error ?? "payouts failed");
+      setPayouts(pData.requests ?? []);
     } catch (e: any) {
       if (e?.message === "USER_CANCELLED") { setLoading(false); return; }
       setErr(e?.message ?? "failed");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function payoutAction(id: string, action: "paid" | "rejected", amount?: number, holder?: boolean) {
+    if (action === "paid") {
+      if (holder === false && !confirm("This wallet does NOT currently hold 20k $SORIO. Pay anyway?")) return;
+      if (!confirm(`Send ${amount != null ? usd(amount) : "the accrued amount"} to this wallet from the bonus wallet? This moves real USDC.`)) return;
+    }
+    setBusyId(id);
+    try {
+      const auth = await signRequest("admin-referral-payout", { requestId: id, op: action });
+      const r = await fetch("/api/admin/referral-payout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId: id, action, ...auth }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error ?? "failed");
+      if (action === "paid") alert(`Paid ${usd(d.paidAmount)} — tx: ${d.tx}`);
+      await loadAll();
+    } catch (e: any) {
+      if (e?.message !== "USER_CANCELLED") alert("Payout action failed: " + (e?.message ?? e));
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -232,6 +272,40 @@ export default function AdminPage() {
                         {i.status === "paused" && (
                           <Btn onClick={() => itemAction(i.id, "resume")} busy={busyId === i.id}>Resume</Btn>
                         )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+
+            {/* ACTIONABLE: referral payouts */}
+            <section>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
+                Referral payouts ({payouts.length})
+              </h2>
+              <div className="mt-3 overflow-hidden rounded-xl border border-[var(--border)]">
+                {payouts.length === 0 ? (
+                  <p className="p-4 text-sm text-[var(--muted)]">No pending payout requests.</p>
+                ) : (
+                  payouts.map((p) => (
+                    <div key={p.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] p-4 last:border-b-0">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">
+                          {usd(p.currentAccrued)} <span className="text-[var(--muted)]">owed · {shortWallet(p.inviterWallet)}</span>
+                        </p>
+                        <p className="text-xs text-[var(--muted)]">
+                          {p.isHolder ? (
+                            <span className="text-[var(--accent)]">holds 20k $SORIO ✓</span>
+                          ) : (
+                            <span className="text-yellow-500">not holding 20k ✗</span>
+                          )}
+                          {` · requested ${new Date(p.requestedAt).toLocaleDateString()}`}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Btn onClick={() => payoutAction(p.id, "paid", p.currentAccrued, p.isHolder)} busy={busyId === p.id}>Send payout</Btn>
+                        <Btn danger onClick={() => payoutAction(p.id, "rejected")} busy={busyId === p.id}>Reject</Btn>
                       </div>
                     </div>
                   ))
