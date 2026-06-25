@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import useSWR from "swr";
 import { AppShell } from "../app-shell";
 import { useWallet } from "../providers";
 import { signRequest } from "../lib/sign-request";
+import { fetcher } from "../lib/fetcher";
 
 type Stats = {
   code: string;
@@ -23,9 +25,11 @@ const usd = (baseUnits: number) =>
 
 export default function BonusPage() {
   const { address } = useWallet();
-  const [data, setData] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const { data, error: swrError, isLoading: loading } = useSWR<Stats>(
+    address ? `/api/referral-stats?wallet=${address}` : null,
+    fetcher
+  );
+  const err = swrError ? (swrError.message ?? "failed") : null;
   const [copied, setCopied] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [requested, setRequested] = useState(false);
@@ -48,20 +52,6 @@ export default function BonusPage() {
       setRequesting(false);
     }
   }
-
-  useEffect(() => {
-    if (!address) return;
-    setLoading(true);
-    setErr(null);
-    fetch(`/api/referral-stats?wallet=${address}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.error) throw new Error(d.error);
-        setData(d);
-      })
-      .catch((e) => setErr(e?.message ?? "failed"))
-      .finally(() => setLoading(false));
-  }, [address]);
 
   const link = data
     ? `${typeof window !== "undefined" ? window.location.origin : "https://soriopay.com"}/?invite=${data.code}`
