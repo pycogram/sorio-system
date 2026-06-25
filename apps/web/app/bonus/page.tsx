@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "../app-shell";
 import { useWallet } from "../providers";
+import { signRequest } from "../lib/sign-request";
 
 type Stats = {
   code: string;
@@ -26,6 +27,27 @@ export default function BonusPage() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [requested, setRequested] = useState(false);
+
+  async function requestPayout() {
+    setRequesting(true);
+    try {
+      const auth = await signRequest("referral-payout-request", {});
+      const r = await fetch("/api/referral-payout/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(auth),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error ?? "failed");
+      setRequested(true);
+    } catch (e: any) {
+      if (e?.message !== "USER_CANCELLED") alert(e?.message ?? "Payout request failed");
+    } finally {
+      setRequesting(false);
+    }
+  }
 
   useEffect(() => {
     if (!address) return;
@@ -90,7 +112,7 @@ export default function BonusPage() {
                 onClick={copy}
                 aria-label={copied ? "Copied" : "Copy link"}
                 title={copied ? "Copied" : "Copy link"}
-                className="flex items-center justify-center rounded-lg bg-[var(--btn)] px-3 py-2.5 text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)]"
+                className="flex items-center justify-center rounded-lg border border-[var(--border)] px-3 py-2.5 text-[var(--muted)] transition hover:border-[var(--primary)] hover:text-[var(--foreground)]"
               >
                 {copied ? (
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -131,9 +153,21 @@ export default function BonusPage() {
               </li>
             </ul>
             {reachedMin && data.isHolder && (
-              <p className="mt-3 text-xs text-[var(--accent)]">
-                You&apos;re eligible. Payouts are sent manually from the bonus wallet.
-              </p>
+              <div className="mt-4">
+                {requested ? (
+                  <p className="text-sm text-[var(--accent)]">
+                    Payout requested. You&apos;ll be paid from the bonus wallet shortly.
+                  </p>
+                ) : (
+                  <button
+                    onClick={requestPayout}
+                    disabled={requesting}
+                    className="rounded-lg bg-[var(--btn)] px-4 py-2.5 text-sm font-medium text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)] disabled:opacity-40"
+                  >
+                    {requesting ? "Requesting…" : "Request payout"}
+                  </button>
+                )}
+              </div>
             )}
           </div>
 
