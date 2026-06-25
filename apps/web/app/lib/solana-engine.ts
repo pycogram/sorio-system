@@ -16,7 +16,7 @@ import {
 
 import { signer } from "@solana/kit-plugin-signer";
 import { solanaMainnetRpc } from "@solana/kit-plugin-rpc";
-import { getCreateAssociatedTokenIdempotentInstructionAsync } from "@solana-program/token";
+import { getCreateAssociatedTokenIdempotentInstructionAsync, getTransferCheckedInstruction } from "@solana-program/token";
 
 import {
   subscriptionsProgram,
@@ -84,6 +84,59 @@ export async function ensureMerchantAta(
     .sendTransaction(wire, { encoding: "base64", skipPreflight: false })
     .send();
   return sig;
+}
+
+
+export async function sendUsdc(
+  sender: TransactionSigner,
+  recipient: Address,
+  mint: Address,
+  amount: bigint,
+  decimals: number
+): Promise<{ signature: string }> {
+  // Ensure the recipient's token account exists (idempotent; sender pays rent).
+  await ensureMerchantAta(sender, recipient, mint);
+
+  const [sourceAta] = await findAssociatedTokenPda({
+    owner: sender.address,
+    mint,
+    tokenProgram: TOKEN_PROGRAM,
+  });
+  const [destAta] = await findAssociatedTokenPda({
+    owner: recipient,
+    mint,
+    tokenProgram: TOKEN_PROGRAM,
+  });
+
+  const ix = getTransferCheckedInstruction({
+    source: sourceAta,
+    mint,
+    destination: destAta,
+    authority: sender,
+    amount,
+    decimals,
+  });
+
+  const rpc = createSolanaRpc(RPC_URL);
+  const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
+  const message = pipe(
+    createTransactionMessage({ version: 0 }),
+    (m) => setTransactionMessageFeePayerSigner(sender, m),
+    (m) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, m),
+    (m) => appendTransactionMessageInstruction(ix, m)
+  );
+  const signed = await signTransactionMessageWithSigners(message);
+  const wire = getBase64EncodedWireTransaction(signed);
+  const signature = await rpc
+    .sendTransaction(wire, { encoding: "base64", skipPreflight: false })
+    .send();
+
+  // Confirm it landed before the caller resets any balances.
+  const confirmed = await confirmSignature(rpc, signature);
+  if (!confirmed.ok) {
+    throw new Error(`sendUsdc: tx not confirmed (${signature}): ${confirmed.reason}`);
+  }
+  return { signature };
 }
 
 // MERCHANT (or payer): create a plan. Returns the plan PDA + bump.
