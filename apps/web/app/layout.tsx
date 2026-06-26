@@ -53,6 +53,9 @@ export const metadata: Metadata = {
     shortcut: "/favicon.ico",
     apple: "/apple-touch-icon.png",
   },
+  verification: {
+    google: "id10oC8Sp_aEXTDlRDNAUBcNEPR8PsD9jz5OLzjwjBQ",
+  },
 };
 
 export default async function RootLayout({
@@ -70,6 +73,24 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "Sorio",
+              url: "https://soriopay.com",
+              logo: "https://soriopay.com/og-image.png",
+              description:
+                "Non-custodial recurring payments and payroll on Solana. Approve once on-chain, get paid every cycle in USDC.",
+              sameAs: [
+                "https://x.com/soriopay",
+                "https://github.com/pycogram/sorio-system",
+              ],
+            }),
+          }}
+        />
         <Providers initialTheme={theme}>{children}</Providers>
       </body>
     </html>
