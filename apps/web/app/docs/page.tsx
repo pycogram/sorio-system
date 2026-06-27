@@ -115,9 +115,15 @@ export default function DocsPage() {
           <Faq q="Does Sorio hold my funds?" a="No. Sorio is non-custodial - funds stay in your wallet and move directly to the recipient when each payment is collected." />
         </Section>
 
-        <p className="mt-12 text-center text-sm text-[var(--muted)]">
-          <Link href="/" className="hover:underline">← Back to home</Link>
-        </p>
+
+        <Link href="/" className="inline-flex mt-6 items-center gap-1.5 text-sm text-[var(--muted)] transition hover:text-[var(--foreground)]">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
+          </svg>
+          Back to home
+        </Link>
+
+
       </div>
     </div>
   );
