@@ -527,7 +527,7 @@ export default function Home() {
               <ul className="mt-4 space-y-3 text-sm">
                 <li><a href="/plans" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Sorio Scribe</a></li>
                 <li><a href="/payroll" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Sorio Roll</a></li>
-                <li><span className="text-[var(--muted)] opacity-60">Sorio API</span> <span className="ml-1 text-[10px] text-[var(--muted)]">soon</span></li>
+                <li><a href="/developers" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Sorio API</a></li>
               </ul>
             </div>
 
