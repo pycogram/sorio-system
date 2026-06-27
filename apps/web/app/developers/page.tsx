@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Navbar } from "../navbar";
 import { useWallet } from "../providers";
 import { signRequest } from "../lib/sign-request";
 import Link from "next/link";
