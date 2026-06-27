@@ -106,7 +106,7 @@ export default function DevelopersPage() {
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <Navbar />
+
       <div className="mx-auto max-w-3xl px-6 py-14 mt-12 md:mt-0">
                 {/* Back link */}
         <Link href="/" className="inline-flex mb-6 items-center gap-1.5 text-sm text-[var(--muted)] transition hover:text-[var(--foreground)]">
