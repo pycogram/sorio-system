@@ -104,18 +104,17 @@ export default function DevelopersPage() {
   const activeKeys = keys.filter((k) => !k.revoked_at);
 
   return (
-    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-
-      <div className="mx-auto max-w-3xl px-6 py-14 mt-12 md:mt-0">
-                {/* Back link */}
-        <Link href="/" className="inline-flex mb-6 items-center gap-1.5 text-sm text-[var(--muted)] transition hover:text-[var(--foreground)]">
+    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+      <div className="mx-auto max-w-3xl px-6 py-12">
+        {/* Back link */}
+        <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-[var(--muted)] transition hover:text-[var(--foreground)]">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
           </svg>
           Back to home
         </Link>
 
-        <h1 className="text-3xl font-semibold tracking-tight">Sorio API</h1>
+        <h1 className="mt-8 text-3xl font-semibold tracking-tight">Sorio API</h1>
         <p className="mt-2 text-[var(--muted)] leading-relaxed">
           Read your plans and subscriptions programmatically. Generate an API key, then call the
           endpoints below from your own server.
@@ -275,15 +274,14 @@ export default function DevelopersPage() {
           </div>
 
           <Link href="/" className="inline-flex mt-6 items-center gap-1.5 text-sm text-[var(--muted)] transition hover:text-[var(--foreground)]">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
-          </svg>
-          Back to home
-        </Link>
-
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
+            </svg>
+            Back to home
+          </Link>
         </section>
       </div>
-    </main>
+    </div>
   );
 }
 
