@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useWallet } from "../providers";
 import { signRequest } from "../lib/sign-request";
+import { WalletButton } from "../wallet-button";
 import Link from "next/link";
 
 type KeyRow = {
@@ -18,7 +19,7 @@ const fmtDate = (d: string | null) =>
   d ? new Date(d).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "-";
 
 export default function DevelopersPage() {
-  const { address, connect } = useWallet();
+  const { address } = useWallet();
   const [keys, setKeys] = useState<KeyRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
@@ -106,13 +107,16 @@ export default function DevelopersPage() {
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <div className="mx-auto max-w-3xl px-6 py-12">
-        {/* Back link */}
-        <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-[var(--muted)] transition hover:text-[var(--foreground)]">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
-          </svg>
-          Back to home
-        </Link>
+        {/* Top bar: back link + wallet */}
+        <div className="flex items-center justify-between gap-3">
+          <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-[var(--muted)] transition hover:text-[var(--foreground)]">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
+            </svg>
+            Back to home
+          </Link>
+          <WalletButton />
+        </div>
 
         <h1 className="mt-8 text-3xl font-semibold tracking-tight">Sorio API</h1>
         <p className="mt-2 text-[var(--muted)] leading-relaxed">
@@ -126,13 +130,7 @@ export default function DevelopersPage() {
 
           {!address ? (
             <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
-              <p className="text-sm text-[var(--muted)]">Connect your wallet to create and manage API keys.</p>
-              <button
-                onClick={connect}
-                className="mt-4 rounded-lg bg-[var(--btn)] px-4 py-2.5 text-sm font-medium text-[var(--btn-text)] transition hover:bg-[var(--btn-hover)]"
-              >
-                Connect wallet
-              </button>
+              <p className="text-sm text-[var(--muted)]">Connect your wallet (top right) to create and manage API keys.</p>
             </div>
           ) : (
             <>
