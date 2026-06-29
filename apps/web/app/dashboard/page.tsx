@@ -107,6 +107,11 @@ export default function Dashboard() {
             <MiniStat label="Active paychecks" value={String(activePaychecks)} />
           </div>
 
+          {/* Revenue trend */}
+          {scribe?.revenueByDay && (
+            <RevenueChart days={scribe.revenueByDay} />
+          )}
+
           {/* Recent activity + quick actions */}
           <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-3">
             {/* activity */}
@@ -206,6 +211,55 @@ function MiniStat({ label, value }: { label: string; value: string }) {
     <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-5 py-3">
       <p className="text-xs text-[var(--muted)]">{label}</p>
       <p className="text-lg font-semibold">{value}</p>
+    </div>
+  );
+}
+
+function RevenueChart({ days }: { days: { date: string; amount: number }[] }) {
+  const max = Math.max(...days.map((d) => d.amount), 1);
+  const hasData = days.some((d) => d.amount > 0);
+  const BAR_W = 7;
+  const GAP = 3;
+  const SLOT = BAR_W + GAP;
+  const H = 52;
+
+  return (
+    <div className="mt-8">
+      <h2 className="text-sm font-medium text-[var(--muted)]">Revenue — last 30 days</h2>
+      <div className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 pt-4 pb-3">
+        {!hasData ? (
+          <p className="py-6 text-center text-sm text-[var(--muted)]">No payments in this period.</p>
+        ) : (
+          <svg
+            viewBox={`0 0 ${days.length * SLOT} ${H}`}
+            className="w-full"
+            preserveAspectRatio="none"
+            style={{ height: H }}
+          >
+            {days.map((d, i) => {
+              const barH = d.amount > 0 ? Math.max((d.amount / max) * (H - 4), 2) : 1;
+              return (
+                <rect
+                  key={d.date}
+                  x={i * SLOT}
+                  y={H - barH}
+                  width={BAR_W}
+                  height={barH}
+                  rx={1.5}
+                  fill="var(--accent)"
+                  opacity={d.amount > 0 ? 0.85 : 0.12}
+                >
+                  <title>{d.date}: {usd(d.amount)}</title>
+                </rect>
+              );
+            })}
+          </svg>
+        )}
+        <div className="mt-1 flex justify-between text-[10px] text-[var(--muted)]">
+          <span>30 days ago</span>
+          <span>Today</span>
+        </div>
+      </div>
     </div>
   );
 }
