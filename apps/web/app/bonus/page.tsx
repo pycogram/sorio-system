@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { AppShell } from "../app-shell";
 import { useWallet } from "../providers";
 import { signRequest } from "../lib/sign-request";
@@ -18,6 +18,7 @@ type Stats = {
   };
   isHolder: boolean;
   payoutThresholdUsd: number;
+  hasPendingPayout: boolean;
 };
 
 const usd = (baseUnits: number) =>
@@ -25,14 +26,12 @@ const usd = (baseUnits: number) =>
 
 export default function BonusPage() {
   const { address } = useWallet();
-  const { data, error: swrError, isLoading: loading } = useSWR<Stats>(
-    address ? `/api/referral-stats?wallet=${address}` : null,
-    fetcher
-  );
+  const { mutate } = useSWRConfig();
+  const swrKey = address ? `/api/referral-stats?wallet=${address}` : null;
+  const { data, error: swrError, isLoading: loading } = useSWR<Stats>(swrKey, fetcher);
   const err = swrError ? (swrError.message ?? "failed") : null;
   const [copied, setCopied] = useState(false);
   const [requesting, setRequesting] = useState(false);
-  const [requested, setRequested] = useState(false);
 
   async function requestPayout() {
     setRequesting(true);
@@ -45,7 +44,7 @@ export default function BonusPage() {
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error ?? "failed");
-      setRequested(true);
+      await mutate(swrKey);
     } catch (e: any) {
       if (e?.message !== "USER_CANCELLED") alert(e?.message ?? "Payout request failed");
     } finally {
@@ -144,7 +143,7 @@ export default function BonusPage() {
             </ul>
             {reachedMin && data.isHolder && (
               <div className="mt-4">
-                {requested ? (
+                {data.hasPendingPayout ? (
                   <p className="text-sm text-[var(--accent)]">
                     Payout requested. You&apos;ll be paid from the bonus wallet shortly.
                   </p>
