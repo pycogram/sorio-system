@@ -130,6 +130,12 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  const allSubs = subs ?? [];
+  const activeSubCount = allSubs.filter((s) => s.status === "active").length;
+  const cancelledSubCount = allSubs.filter((s) => ["cancelled", "revoked"].includes(s.status)).length;
+  const totalEver = activeSubCount + cancelledSubCount;
+  const churnRate = totalEver > 0 ? Math.round((cancelledSubCount / totalEver) * 100) : 0;
+
   const plansWithSubs = (plans ?? []).map((p) => {
     const share = p.merchant_amount ?? p.amount;
     return {
@@ -152,6 +158,7 @@ export async function GET(req: NextRequest) {
     plans: plansWithSubs,
     totalRevenue,
     revenueByDay,
+    subscriberStats: { active: activeSubCount, cancelled: cancelledSubCount, churnRate },
     recentPayments: payments ?? [],
     mySubscriptions,
   });
