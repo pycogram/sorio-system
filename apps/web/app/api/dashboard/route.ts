@@ -104,6 +104,24 @@ export async function GET(req: NextRequest) {
     if (plan) totalRevenue += plan.merchant_amount ?? plan.amount;
   }
 
+  // Build a 30-day revenue bucket (UTC dates). Initialise every day to 0 so
+  // the chart always has 30 bars even when some days have no payments.
+  const buckets: Record<string, number> = {};
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - i);
+    buckets[d.toISOString().slice(0, 10)] = 0;
+  }
+  for (const pay of payments ?? []) {
+    if (pay.status !== "success") continue;
+    const sub = subById.get(pay.subscription_id);
+    const plan = sub ? planById.get(sub.plan_id) : null;
+    if (!plan) continue;
+    const day = (pay.attempted_at as string).slice(0, 10);
+    if (day in buckets) buckets[day] += plan.merchant_amount ?? plan.amount;
+  }
+  const revenueByDay = Object.entries(buckets).map(([date, amount]) => ({ date, amount }));
+
   // Per-subscriber successful payment counts (from already-fetched payments).
   const successCountBySub = new Map<string, number>();
   for (const pay of payments ?? []) {
@@ -133,6 +151,7 @@ export async function GET(req: NextRequest) {
     merchant,
     plans: plansWithSubs,
     totalRevenue,
+    revenueByDay,
     recentPayments: payments ?? [],
     mySubscriptions,
   });
