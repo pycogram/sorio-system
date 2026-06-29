@@ -97,7 +97,13 @@ export default function Dashboard() {
             <Stat label="Revenue (subscriptions)" value={usd(revenue)} accent />
             <Stat label="Paid out (payroll)" value={usd(paidOut)} />
             <Stat label="Received (paychecks)" value={usd(totalReceived)} accent />
-            <Stat label="Active subscribers" value={String(activeSubscribers)} />
+            <Stat
+              label="Active subscribers"
+              value={String(activeSubscribers)}
+              sub={scribe?.subscriberStats?.churnRate != null
+                ? `${scribe.subscriberStats.churnRate}% churn · ${scribe.subscriberStats.cancelled} cancelled`
+                : undefined}
+            />
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -197,11 +203,12 @@ export default function Dashboard() {
   );
 }
 
-function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+function Stat({ label, value, accent, sub }: { label: string; value: string; accent?: boolean; sub?: string }) {
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
       <p className="text-xs text-[var(--muted)]">{label}</p>
       <p className={`mt-1 text-2xl font-semibold tracking-tight ${accent ? "text-[var(--accent)]" : ""}`}>{value}</p>
+      {sub && <p className="mt-1 text-xs text-[var(--muted)]">{sub}</p>}
     </div>
   );
 }
@@ -225,7 +232,7 @@ function RevenueChart({ days }: { days: { date: string; amount: number }[] }) {
 
   return (
     <div className="mt-8">
-      <h2 className="text-sm font-medium text-[var(--muted)]">Revenue — last 30 days</h2>
+      <h2 className="text-sm font-medium text-[var(--muted)]">Revenue - last 30 days</h2>
       <div className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 pt-4 pb-3">
         {!hasData ? (
           <p className="py-6 text-center text-sm text-[var(--muted)]">No payments in this period.</p>
