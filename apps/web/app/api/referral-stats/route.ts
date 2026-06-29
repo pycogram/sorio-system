@@ -58,6 +58,13 @@ export async function GET(req: NextRequest) {
       isHolder = false;
     }
 
+    const { data: pendingPayout } = await db
+      .from("payout_requests")
+      .select("id")
+      .eq("inviter_wallet", wallet)
+      .eq("status", "pending")
+      .maybeSingle();
+
     return NextResponse.json({
       code,
       stats: {
@@ -69,6 +76,7 @@ export async function GET(req: NextRequest) {
       },
       isHolder,
       payoutThresholdUsd: 1, // min $1 to pay out
+      hasPendingPayout: !!pendingPayout,
     });
   } catch (e: any) {
     console.error("referral-stats failed:", e?.message ?? e);
