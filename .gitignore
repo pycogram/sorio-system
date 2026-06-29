@@ -3,6 +3,7 @@
 .dev.vars
 .keys/
 node_modules/
+CLAUDE.md
 .next/
 .wrangler/
 dist/
