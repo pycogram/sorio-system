@@ -2,6 +2,7 @@
 import Link from "next/link";
 
 import { useEffect, useState, use } from "react";
+import { useSearchParams } from "next/navigation";
 import { Navbar } from "../../navbar";
 import { useWallet } from "../../providers";
 import { runSubscribe } from "./subscribe-action";
@@ -37,15 +38,32 @@ export default function SubscribePage({
 }) {
   const { planPda } = use(params);
   const { address } = useWallet();
+  const searchParams = useSearchParams();
   const [plan, setPlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [alreadySubscribed, setAlreadySubscribed] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
   const [done, setDone] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const [limitOn, setLimitOn] = useState(false);
   const [times, setTimes] = useState("3");
   const [isHolder, setIsHolder] = useState(false);
+
+  // Validate redirect_uri: only http/https allowed. The customer will be sent
+  // here after subscribing, with subscription + plan + status appended.
+  const rawRedirect = searchParams.get("redirect_uri");
+  const redirectUri = (() => {
+    if (!rawRedirect) return null;
+    try {
+      const u = new URL(rawRedirect);
+      if (u.protocol !== "https:" && u.protocol !== "http:") return null;
+      return rawRedirect;
+    } catch {
+      return null;
+    }
+  })();
+  const redirectHost = redirectUri ? new URL(redirectUri).hostname : null;
 
   useEffect(() => {
     fetch(`/api/plan/${planPda}`)
@@ -204,8 +222,15 @@ export default function SubscribePage({
                         merchantWallet: plan.merchants?.destination_wallet ?? "",
                         maxPayments: limitOn ? parseInt(times) || null : null,
                       });
-                      console.log("subscribed:", r);
                       setDone(true);
+                      if (redirectUri) {
+                        setRedirecting(true);
+                        const dest = new URL(redirectUri);
+                        dest.searchParams.set("subscription", r.subscriptionPda.toString());
+                        dest.searchParams.set("plan", plan.plan_pda);
+                        dest.searchParams.set("status", "active");
+                        setTimeout(() => { window.location.href = dest.toString(); }, 2000);
+                      }
                     } catch (e: any) {
                       console.error("subscribe failed:", e);
                       if (e?.message === "USER_CANCELLED") return;
@@ -266,6 +291,11 @@ export default function SubscribePage({
                   )}
                 </div>
 
+                {redirectHost && !done && (
+                  <p className="mt-4 text-center text-xs text-[var(--muted)]">
+                    You'll be returned to <span className="font-medium">{redirectHost}</span> after subscribing.
+                  </p>
+                )}
                 {isOwnPlan && (
                   <p className="mt-3 text-center text-sm text-[var(--muted)]">
                     You can&apos;t subscribe to your own plan.
@@ -273,7 +303,9 @@ export default function SubscribePage({
                 )}
                 {done && (
                   <p className="mt-3 text-center text-sm text-[var(--accent)]">
-                    You're all set. Payments will renew automatically.
+                    {redirecting
+                      ? `Redirecting back to ${redirectHost}…`
+                      : "You're all set. Payments will renew automatically."}
                   </p>
                 )}
                 <p className="mt-3 text-center text-xs text-[var(--muted)]">
