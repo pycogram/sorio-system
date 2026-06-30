@@ -51,7 +51,6 @@ function Reveal({
 /* $SORIO token chip: shows the ticker + a copyable contract address. */
 function TokenChip() {
   const [copied, setCopied] = useState(false);
-  // TODO: replace with the real $SORIO contract address once the token launches.
   const CA = "A6VcXrUUYjNiR8RkHCRNu8zuxWUMnhMWoX11j6Bapump";
   const shortCA = `${CA.slice(0, 4)}…${CA.slice(-4)}`;
 
@@ -271,9 +270,9 @@ export default function Home() {
           </p>
         </Reveal>
         <div className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-3">
-          <Reveal delay={0}><ProductCard name="Sorio Scribe" tag="Live" tagLive body="Subscriptions for merchants. Create plans, share a link, get paid automatically. Customers subscribe and cancel anytime." /></Reveal>
-          <Reveal delay={100}><ProductCard name="Sorio Roll" tag="Live" tagLive body="Payroll on the same rail. Pay employees and contractors on a recurring schedule, in stablecoins, on-chain." /></Reveal>
-          <Reveal delay={200}><ProductCard name="Sorio API" tag="Coming soon" body="Infrastructure for builders. Integrate Sorio's recurring-payment rail directly into your own product." /></Reveal>
+          <Reveal delay={0}><ProductCard name="Sorio Scribe" tag="Live" tagLive href="/plans" body="Subscriptions for merchants. Create plans, share a link, get paid automatically. Customers subscribe and cancel anytime." /></Reveal>
+          <Reveal delay={100}><ProductCard name="Sorio Roll" tag="Live" tagLive href="/payroll" body="Payroll on the same rail. Pay employees and contractors on a recurring schedule, in stablecoins, on-chain." /></Reveal>
+          <Reveal delay={200}><ProductCard name="Sorio API" tag="Live" tagLive href="/developers" body="Developer API for builders. Create plans, host checkout, and receive webhooks when payments land, integrate recurring payments into your own product." /></Reveal>
         </div>
       </section>
 
@@ -395,6 +394,9 @@ export default function Home() {
                 <TrustRow text="Recurring, autonomous payments, no human in the loop each cycle" />
                 <TrustRow text="Full transparency: every payment is on-chain and revocable" />
               </div>
+              <a href="/developers" className="mt-7 inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium transition hover:border-[var(--primary)]">
+                Build with the API →
+              </a>
             </Reveal>
           </div>
         </div>
@@ -548,7 +550,7 @@ export default function Home() {
                 <li><a href="https://x.com/soriopay" target="_blank" rel="noreferrer" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">X (Twitter)</a></li>
                 <li><a href="https://github.com/pycogram/sorio-system" target="_blank" rel="noreferrer" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">GitHub</a></li>
                 <li><a href="https://solana.com" target="_blank" rel="noreferrer" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Solana</a></li>
-                <li><a href="/docs" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Docs</a></li>
+                <li><a href="/developers" className="text-[var(--muted)] transition hover:text-[var(--foreground)]">Developers</a></li>
               </ul>
             </div>
           </div>
@@ -638,9 +640,10 @@ function RelationshipFlow({
   );
 }
 
-function ProductCard({ name, tag, body, tagLive }: { name: string; tag: string; body: string; tagLive?: boolean }) {
-  return (
-    <div className="hover-lift group h-full rounded-2xl border border-[var(--border)] bg-[var(--card)] p-7 hover:border-[var(--primary)] hover:shadow-xl">
+function ProductCard({ name, tag, body, tagLive, href }: { name: string; tag: string; body: string; tagLive?: boolean; href?: string }) {
+  const cls = "hover-lift group flex h-full flex-col rounded-2xl border border-[var(--border)] bg-[var(--card)] p-7 hover:border-[var(--primary)] hover:shadow-xl";
+  const content = (
+    <>
       <div className="flex items-center justify-between">
         <p className="text-lg font-semibold">{name}</p>
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${tagLive ? "bg-[var(--accent)] text-black" : "border border-[var(--border)] text-[var(--muted)]"}`}>
@@ -648,8 +651,11 @@ function ProductCard({ name, tag, body, tagLive }: { name: string; tag: string; 
         </span>
       </div>
       <p className="mt-3 text-sm text-[var(--muted)]">{body}</p>
-    </div>
+      {href && <p className="mt-auto pt-4 text-xs font-medium text-[var(--primary)]">Open →</p>}
+    </>
   );
+  if (href) return <a href={href} className={cls}>{content}</a>;
+  return <div className={cls}>{content}</div>;
 }
 
 function StepCard({ n, title, body }: { n: string; title: string; body: string }) {
