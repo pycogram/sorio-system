@@ -22,6 +22,40 @@ const SORIO_MINT = "A6VcXrUUYjNiR8RkHCRNu8zuxWUMnhMWoX11j6Bapump";
 const SORIO_TOKEN_2022 = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
 const SORIO_THRESHOLD = 20000n * 1_000_000n; // 20,000 $SORIO (6 decimals)
 
+// Fire a webhook to the merchant's registered endpoint after a successful payment.
+// Uses the Web Crypto API (available in Cloudflare Workers) to sign the payload
+// with HMAC-SHA256 so the receiver can verify it's genuinely from Sorio.
+async function fireWebhook(db: any, merchantWallet: string, payload: object): Promise<void> {
+  try {
+    const { data: hook } = await db
+      .from("webhooks")
+      .select("url, secret")
+      .eq("wallet", merchantWallet)
+      .eq("active", true)
+      .maybeSingle();
+    if (!hook) return;
+
+    const body = JSON.stringify(payload);
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw", enc.encode(hook.secret),
+      { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    );
+    const sigBuf = await crypto.subtle.sign("HMAC", key, enc.encode(body));
+    const hex = Array.from(new Uint8Array(sigBuf))
+      .map((b) => b.toString(16).padStart(2, "0")).join("");
+
+    const res = await fetch(hook.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Sorio-Signature": `sha256=${hex}` },
+      body,
+    });
+    console.log(`   webhook fired -> ${hook.url} (${res.status})`);
+  } catch (e: any) {
+    console.log("   webhook error (non-fatal):", e?.message ?? e);
+  }
+}
+
 // Referral reward: 0.4% of the payment amount. Duplicated here because the
 // worker can't import from apps/web/app/lib. Keep in sync with referral-accrue.ts.
 const REFERRAL_RATE_BPS = 40n; // 0.4%
@@ -234,7 +268,21 @@ export default {
 
       // Referral accrual: on success, accrue 0.4% of the merchant amount to the
       // subscriber's inviter (if any). Non-fatal.
-      if (ok) await accrueReferral(db, sub.subscriber_wallet, merchantAmount);
+      if (ok) {
+        await accrueReferral(db, sub.subscriber_wallet, merchantAmount);
+        await fireWebhook(db, destWallet, {
+          event: "payment.collected",
+          data: {
+            subscription: sub.subscription_pda,
+            plan: plan.plan_pda,
+            subscriber: sub.subscriber_wallet,
+            amount: Number(merchantAmount),
+            fee: Number(feeAmount),
+            tx: sig,
+            collected_at: nowIso,
+          },
+        });
+      }
 
       // Auto-retire: after 3 consecutive failed attempts (no success in
       // between), pause the subscription so we stop retrying one that can't pay.
