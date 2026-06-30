@@ -298,6 +298,118 @@ export default function DevelopersPage() {
           </div>
         </section>
 
+        {/* ── WEBHOOKS ── */}
+        <section className="mt-14">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">Webhooks</h2>
+          <p className="mt-3 text-sm text-[var(--muted)] leading-relaxed">
+            Instead of polling <code>GET /v1/subscriptions</code> to find out when a payment is collected,
+            register a webhook endpoint and Sorio will call you. Every time the cron worker
+            successfully pulls a subscription payment, your server receives an HTTP POST with the details.
+          </p>
+
+          <div className="mt-6 space-y-4 text-sm">
+
+            {/* Register */}
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+              <div className="flex items-center gap-2">
+                <span className="rounded px-2 py-0.5 text-xs font-semibold bg-[var(--primary)]/10 text-[var(--primary)]">POST</span>
+                <code className="text-sm font-medium">/v1/webhooks</code>
+              </div>
+              <p className="mt-2 text-[var(--muted)]">Register a webhook endpoint. Replaces any existing webhook for your wallet. The <code>secret</code> is returned once — save it immediately.</p>
+              <p className="mt-3 text-xs font-medium text-[var(--muted)]">Body</p>
+              <pre className="mt-1 overflow-x-auto rounded bg-[var(--background)] px-3 py-2 text-xs"><code>{`{ "url": "https://yourapp.com/webhook" }`}</code></pre>
+              <p className="mt-3 text-xs font-medium text-[var(--muted)]">Example</p>
+              <pre className="mt-1 overflow-x-auto rounded bg-[var(--background)] px-3 py-2 text-xs"><code>{`curl -X POST https://soriopay.com/api/v1/webhooks \\
+  -H "Authorization: Bearer sk_live_..." \\
+  -H "Content-Type: application/json" \\
+  -d '{ "url": "https://yourapp.com/webhook" }'`}</code></pre>
+              <p className="mt-3 text-xs font-medium text-[var(--muted)]">Response</p>
+              <pre className="mt-1 overflow-x-auto rounded bg-[var(--background)] px-3 py-2 text-xs"><code>{`{
+  "data": {
+    "id": "3b1a9f...",
+    "url": "https://yourapp.com/webhook",
+    "secret": "a3f8c2...",   // 64-char hex — store this, shown once
+    "active": true,
+    "created_at": "2026-06-30T12:00:00Z"
+  }
+}`}</code></pre>
+            </div>
+
+            {/* List + Delete */}
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="rounded px-2 py-0.5 text-xs font-semibold bg-[var(--accent)]/10 text-[var(--accent)]">GET</span>
+                  <code className="text-sm font-medium">/v1/webhooks</code>
+                  <span className="text-xs text-[var(--muted)]">— list your active webhook (secret not returned)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="rounded px-2 py-0.5 text-xs font-semibold bg-red-500/10 text-red-500">DELETE</span>
+                  <code className="text-sm font-medium">/v1/webhooks/{"{id}"}</code>
+                  <span className="text-xs text-[var(--muted)]">— deactivate a webhook</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Event payload */}
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+              <p className="font-medium">Event: <code>payment.collected</code></p>
+              <p className="mt-2 text-[var(--muted)]">Fired after every successful subscription payment collection.</p>
+              <pre className="mt-3 overflow-x-auto rounded bg-[var(--background)] px-3 py-2 text-xs"><code>{`{
+  "event": "payment.collected",
+  "data": {
+    "subscription": "A7foa2Vk...",  // subscription delegation address
+    "plan":         "E9Sc8p63...",  // plan address
+    "subscriber":   "EFWqU3k4...",  // payer wallet
+    "amount":       9990000,        // your cut (USDC base units)
+    "fee":          199800,         // platform fee
+    "tx":           "5jK7...",      // on-chain transaction signature
+    "collected_at": "2026-06-30T12:00:00Z"
+  }
+}`}</code></pre>
+            </div>
+
+            {/* Signature verification */}
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+              <p className="font-medium">Verifying the signature</p>
+              <p className="mt-2 text-[var(--muted)]">
+                Every request includes an <code>X-Sorio-Signature</code> header.
+                It's an HMAC-SHA256 of the raw request body, signed with your webhook secret.
+                Always verify it before acting on the payload — anyone can POST to your endpoint.
+              </p>
+              <pre className="mt-3 overflow-x-auto rounded bg-[var(--background)] px-3 py-2 text-xs"><code>{`// Node.js / Express example
+const crypto = require("crypto");
+
+app.post("/webhook", express.raw({ type: "application/json" }), (req, res) => {
+  const sig  = req.headers["x-sorio-signature"];          // "sha256=abc123..."
+  const hmac = "sha256=" + crypto
+    .createHmac("sha256", process.env.SORIO_WEBHOOK_SECRET)
+    .update(req.body)   // raw Buffer — do NOT parse JSON first
+    .digest("hex");
+
+  if (sig !== hmac) {
+    return res.status(401).send("Invalid signature");
+  }
+
+  const event = JSON.parse(req.body);
+  if (event.event === "payment.collected") {
+    // provision the subscriber, send a receipt, etc.
+    const { subscription, subscriber, amount } = event.data;
+    console.log(\`\${subscriber} paid \${amount / 1e6} USDC\`);
+  }
+
+  res.sendStatus(200);  // always respond quickly — Sorio does not retry
+});`}</code></pre>
+              <p className="mt-3 text-xs text-[var(--muted)]">
+                Parse JSON <em>after</em> verifying — the HMAC is computed over the raw bytes,
+                not the parsed object. Sorio fires and forgets: if your server is down, the event is lost.
+                Design your endpoint to be idempotent.
+              </p>
+            </div>
+
+          </div>
+        </section>
+
         {/* ── HOSTED CHECKOUT ── */}
         <section className="mt-14">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">Hosted checkout</h2>
