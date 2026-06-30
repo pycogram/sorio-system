@@ -296,14 +296,103 @@ export default function DevelopersPage() {
               Errors return an HTTP error status with <code>{`{ "error": "..." }`}</code>.
             </p>
           </div>
+        </section>
 
-          <Link href="/" className="inline-flex mt-6 items-center gap-1.5 text-sm text-[var(--muted)] transition hover:text-[var(--foreground)]">
+        {/* ── HOSTED CHECKOUT ── */}
+        <section className="mt-14">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">Hosted checkout</h2>
+          <p className="mt-3 text-sm text-[var(--muted)] leading-relaxed">
+            Subscribing requires the customer's Solana wallet. Instead of building wallet integration yourself,
+            redirect your customer to Sorio's hosted checkout page — they connect their wallet and sign on-chain there,
+            then land back on your site with the result.
+          </p>
+
+          <div className="mt-6 space-y-4 text-sm">
+
+            {/* Step 1 */}
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+              <p className="font-medium">Step 1 — Build the checkout URL</p>
+              <p className="mt-2 text-[var(--muted)]">
+                Take the <code>subscribe_url</code> from <code>POST /v1/plans</code> and append your <code>redirect_uri</code>:
+              </p>
+              <pre className="mt-3 overflow-x-auto rounded bg-[var(--background)] px-3 py-2 text-xs"><code>{`https://soriopay.com/subscribe/{plan_id}?redirect_uri=https://yourapp.com/callback`}</code></pre>
+              <p className="mt-3 text-xs text-[var(--muted)]">
+                <code>redirect_uri</code> must be an <code>http://</code> or <code>https://</code> URL.
+                Any other scheme is rejected and no redirect will happen.
+              </p>
+            </div>
+
+            {/* Step 2 */}
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+              <p className="font-medium">Step 2 — Redirect your customer</p>
+              <p className="mt-2 text-[var(--muted)]">
+                Send your customer to that URL however you like — an anchor tag, a server redirect, a button.
+                They'll land on a Sorio-hosted page that shows the plan name, amount, billing period, and fee breakdown.
+                They connect their Solana wallet, optionally set a payment limit, then click Subscribe.
+                The on-chain signing happens entirely on the Sorio page — you don't need to handle any wallet code.
+              </p>
+            </div>
+
+            {/* Step 3 */}
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+              <p className="font-medium">Step 3 — Receive the callback</p>
+              <p className="mt-2 text-[var(--muted)]">
+                After a successful subscription, Sorio redirects the customer back to your <code>redirect_uri</code>
+                with three query parameters appended:
+              </p>
+              <pre className="mt-3 overflow-x-auto rounded bg-[var(--background)] px-3 py-2 text-xs"><code>{`https://yourapp.com/callback
+  ?subscription=A7foa2Vk...   // on-chain subscription address
+  &plan=E9Sc8p63...           // the plan ID
+  &status=active`}</code></pre>
+              <div className="mt-4 overflow-hidden rounded-lg border border-[var(--border)] text-xs">
+                <div className="grid grid-cols-[auto_1fr] divide-y divide-[var(--border)]">
+                  {[
+                    ["subscription", "The on-chain subscription delegation address. Unique per customer per plan."],
+                    ["plan", "The plan ID — same as the id returned by POST /v1/plans."],
+                    ["status", "Always active at the time of redirect. The subscription is live on-chain."],
+                  ].map(([param, desc]) => (
+                    <div key={param} className="contents">
+                      <div className="bg-[var(--background)] px-3 py-2 font-mono font-medium">{param}</div>
+                      <div className="px-3 py-2 text-[var(--muted)]">{desc}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-[var(--muted)]">
+                If the customer cancels or closes the tab, no redirect happens. Design your flow to handle
+                cases where the customer never returns.
+              </p>
+            </div>
+
+            {/* Step 4 */}
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+              <p className="font-medium">Step 4 — Verify before provisioning</p>
+              <p className="mt-2 text-[var(--muted)]">
+                The callback parameters are informational — treat them as a hint, not proof.
+                Before granting your customer access to anything, confirm the subscription is real
+                by calling <code>GET /api/v1/subscriptions</code> from your server and finding the
+                matching <code>id</code> with <code>status: "active"</code>.
+              </p>
+              <pre className="mt-3 overflow-x-auto rounded bg-[var(--background)] px-3 py-2 text-xs"><code>{`// On your server after receiving the callback:
+const res = await fetch("https://soriopay.com/api/v1/subscriptions", {
+  headers: { Authorization: "Bearer sk_live_..." },
+});
+const { data } = await res.json();
+const sub = data.find(s => s.id === subscriptionFromCallback);
+if (sub?.status === "active") {
+  // safe to provision
+}`}</code></pre>
+            </div>
+
+          </div>
+        </section>
+
+        <Link href="/" className="inline-flex mt-10 items-center gap-1.5 text-sm text-[var(--muted)] transition hover:text-[var(--foreground)]">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
             </svg>
             Back to home
           </Link>
-        </section>
       </div>
     </div>
   );
