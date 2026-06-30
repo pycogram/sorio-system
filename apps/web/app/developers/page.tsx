@@ -243,6 +243,32 @@ export default function DevelopersPage() {
             />
 
             <Endpoint
+              method="POST"
+              path="/v1/plans"
+              desc="Create a new subscription plan on-chain. Returns the plan address and a shareable subscribe link."
+              body={`{
+  "name":   "Pro Plan",  // string, required, max 100 chars
+  "amount": "9.99",      // USDC you receive per cycle — fee is added on top
+  "period": "monthly"    // hourly | daily | weekly | monthly | yearly
+}`}
+              example={`curl -X POST https://soriopay.com/api/v1/plans \\
+  -H "Authorization: Bearer sk_live_..." \\
+  -H "Content-Type: application/json" \\
+  -d '{ "name": "Pro Plan", "amount": "9.99", "period": "monthly" }'`}
+              response={`{
+  "data": {
+    "id": "E9Sc8p63...",            // on-chain plan address
+    "name": "Pro Plan",
+    "amount": 10189800,              // total charged to subscriber (USDC base units)
+    "merchant_amount": 9990000,      // your cut after fee
+    "period_seconds": 2592000,
+    "active": true,
+    "subscribe_url": "https://soriopay.com/subscribe/E9Sc8p63..."
+  }
+}`}
+            />
+
+            <Endpoint
               method="GET"
               path="/v1/subscriptions"
               desc="List subscriptions to your plans."
@@ -266,7 +292,7 @@ export default function DevelopersPage() {
             />
 
             <p className="text-xs text-[var(--muted)]">
-              The API is read-only for now. Amounts are in USDC base units (divide by 1,000,000 for dollars).
+              Amounts are in USDC base units (divide by 1,000,000 for dollars).
               Errors return an HTTP error status with <code>{`{ "error": "..." }`}</code>.
             </p>
           </div>
@@ -283,16 +309,23 @@ export default function DevelopersPage() {
   );
 }
 
-function Endpoint({ method, path, desc, example, response }: {
-  method: string; path: string; desc: string; example: string; response: string;
+function Endpoint({ method, path, desc, body, example, response }: {
+  method: string; path: string; desc: string; body?: string; example: string; response: string;
 }) {
+  const isWrite = method !== "GET";
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
       <div className="flex items-center gap-2">
-        <span className="rounded bg-[var(--accent)]/10 px-2 py-0.5 text-xs font-semibold text-[var(--accent)]">{method}</span>
+        <span className={`rounded px-2 py-0.5 text-xs font-semibold ${isWrite ? "bg-[var(--primary)]/10 text-[var(--primary)]" : "bg-[var(--accent)]/10 text-[var(--accent)]"}`}>{method}</span>
         <code className="text-sm font-medium">{path}</code>
       </div>
       <p className="mt-2 text-[var(--muted)]">{desc}</p>
+      {body && (
+        <>
+          <p className="mt-3 text-xs font-medium text-[var(--muted)]">Body</p>
+          <pre className="mt-1 overflow-x-auto rounded bg-[var(--background)] px-3 py-2 text-xs"><code>{body}</code></pre>
+        </>
+      )}
       <p className="mt-3 text-xs font-medium text-[var(--muted)]">Request</p>
       <pre className="mt-1 overflow-x-auto rounded bg-[var(--background)] px-3 py-2 text-xs"><code>{example}</code></pre>
       <p className="mt-3 text-xs font-medium text-[var(--muted)]">Response</p>
