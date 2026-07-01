@@ -269,6 +269,50 @@ export default function DevelopersPage() {
             />
 
             <Endpoint
+              method="POST"
+              path="/v1/subscriptions/{id}/cancel"
+              desc="Cancel an active subscription. The worker will stop collecting payments immediately. Returns 409 if the subscription is not currently active."
+              example={`curl -X POST https://soriopay.com/api/v1/subscriptions/A7foa2Vk.../cancel \\
+  -H "Authorization: Bearer sk_live_..."`}
+              response={`{
+  "data": {
+    "id": "A7foa2Vk...",
+    "plan_id": "E9Sc8p63...",
+    "plan_name": "Pro Plan",
+    "subscriber": "EFWqU3k4...",
+    "status": "cancelled"
+  }
+}`}
+            />
+
+            <Endpoint
+              method="GET"
+              path="/v1/payments"
+              desc="List successful payment collections across your subscriptions. Filter to one subscriber with ?subscription=<id>."
+              example={`curl https://soriopay.com/api/v1/payments \\
+  -H "Authorization: Bearer sk_live_..."
+
+# filter to one subscriber:
+curl "https://soriopay.com/api/v1/payments?subscription=A7foa2Vk..." \\
+  -H "Authorization: Bearer sk_live_..."`}
+              response={`{
+  "data": [
+    {
+      "id": "d4f8a1...",
+      "subscription": "A7foa2Vk...",
+      "plan": "E9Sc8p63...",
+      "plan_name": "Pro Plan",
+      "subscriber": "EFWqU3k4...",
+      "amount": 9990000,        // your cut (USDC base units)
+      "fee": 199800,            // platform fee
+      "tx": "5jK7...",         // on-chain transaction signature
+      "collected_at": "2026-06-30T12:00:00Z"
+    }
+  ]
+}`}
+            />
+
+            <Endpoint
               method="GET"
               path="/v1/subscriptions/{id}"
               desc="Look up a single subscription by its on-chain address. Use this to verify a checkout callback before provisioning access."
