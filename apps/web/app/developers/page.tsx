@@ -270,8 +270,30 @@ export default function DevelopersPage() {
 
             <Endpoint
               method="GET"
+              path="/v1/subscriptions/{id}"
+              desc="Look up a single subscription by its on-chain address. Use this to verify a checkout callback before provisioning access."
+              example={`curl https://soriopay.com/api/v1/subscriptions/A7foa2Vk... \\
+  -H "Authorization: Bearer sk_live_..."`}
+              response={`{
+  "data": {
+    "id": "A7foa2Vk...",
+    "plan_id": "E9Sc8p63...",
+    "plan_name": "Pro Plan",
+    "subscriber": "EFWqU3k4...",
+    "status": "active",
+    "next_collection_at": "2026-07-24T18:53:09Z",
+    "last_collection_at": "2026-06-24T18:53:09Z",
+    "max_payments": null,
+    "payments_made": 2,
+    "subscribed_at": "2026-06-24T17:52:49Z"
+  }
+}`}
+            />
+
+            <Endpoint
+              method="GET"
               path="/v1/subscriptions"
-              desc="List subscriptions to your plans."
+              desc="List all subscriptions to your plans."
               example={`curl https://soriopay.com/api/v1/subscriptions \\
   -H "Authorization: Bearer sk_live_..."`}
               response={`{
