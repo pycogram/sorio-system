@@ -107,6 +107,46 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
+    // --- Resolve merchant + rate limit (before touching the chain) ---
+    // Merchant lookup is done first so we can reject over-limit requests
+    // without spending SOL on plan creation.
+    const supa = db();
+
+    let merchantId: string;
+    const { data: existing } = await supa
+      .from("merchants")
+      .select("id")
+      .eq("destination_wallet", wallet)
+      .maybeSingle();
+
+    if (existing) {
+      merchantId = existing.id;
+    } else {
+      const { data: m, error: mErr } = await supa
+        .from("merchants")
+        .insert({ wallet_address: wallet, destination_wallet: wallet, name: "Merchant" })
+        .select("id")
+        .single();
+      if (mErr) throw mErr;
+      merchantId = m.id;
+    }
+
+    // Rate limit: max 10 plans per wallet per 24 hours.
+    // Each plan creation costs the platform SOL, so we cap it to prevent drain attacks.
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count: recentCount } = await supa
+      .from("plans")
+      .select("id", { count: "exact", head: true })
+      .eq("merchant_id", merchantId)
+      .gte("created_at", since);
+
+    if ((recentCount ?? 0) >= 10) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. You can create up to 10 plans per 24 hours." },
+        { status: 429 }
+      );
+    }
+
     // --- Compute amounts ---
     // amount is what the merchant wants to receive. We add the platform fee on top
     // so the customer pays a slightly higher total (same logic as the UI flow).
@@ -134,29 +174,6 @@ export async function POST(req: Request) {
       await ensureMerchantAta(platform, address(wallet), USDC_MINT);
     } catch (e: any) {
       console.error("ensureMerchantAta failed (non-fatal):", e?.message ?? e);
-    }
-
-    // --- Write to DB ---
-    const supa = db();
-
-    // Reuse or create the merchant record for this wallet.
-    let merchantId: string;
-    const { data: existing } = await supa
-      .from("merchants")
-      .select("id")
-      .eq("destination_wallet", wallet)
-      .maybeSingle();
-
-    if (existing) {
-      merchantId = existing.id;
-    } else {
-      const { data: m, error: mErr } = await supa
-        .from("merchants")
-        .insert({ wallet_address: wallet, destination_wallet: wallet, name: "Merchant" })
-        .select("id")
-        .single();
-      if (mErr) throw mErr;
-      merchantId = m.id;
     }
 
     const { error: pErr } = await supa.from("plans").insert({
