@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient as createDb } from "@supabase/supabase-js";
 import { randomBytes } from "crypto";
 import { verifyApiKey, ApiKeyError } from "../../../lib/verify-api-key";
+import { isPrivateHost } from "../../../lib/validate-webhook-url";
 
 export const runtime = "nodejs";
 
@@ -62,6 +63,9 @@ export async function POST(req: Request) {
     }
   } catch {
     return NextResponse.json({ error: "url is not a valid URL." }, { status: 400 });
+  }
+  if (isPrivateHost(url)) {
+    return NextResponse.json({ error: "url must point to a public host." }, { status: 400 });
   }
 
   const secret = randomBytes(32).toString("hex");
